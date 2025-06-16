@@ -118,6 +118,39 @@ Blockchain data tools based on ThirdWeb Insight API:
 - **Block Data Queries** - Block information retrieval
 - **Wallet Transaction History** - Wallet address transaction records
 
+### 🔍 Chainbase - Blockchain Data API Tools
+**Path**: `chainbase/`
+
+Comprehensive blockchain data query tools based on Chainbase API:
+
+#### Chainbase Tools (`chainbase_tools.py`)
+- **GetLatestBlockNumberTool** - Get the latest block height of blockchain network
+- **GetBlockByNumberTool** - Get the block by number of blockchain network
+- **GetTransactionByHashTool** - Get the transaction by hash of blockchain network
+- **GetAccountTransactionsTool** - Returns the transactions from a specific wallet address
+- **ContractCallTool** - Calls a specific function for the specified contract
+- **GetAccountTokensTool** - Retrieve all token balances for all ERC20 tokens for a specified address
+- **GetAccountNFTsTool** - Get the list of NFTs owned by an account
+- **GetAccountBalanceTool** - Returns the native token balance for a specified address
+- **GetTokenMetadataTool** - Get the metadata of a specified token
+
+#### Balance Module (`balance.py`)
+- **Account Token Balances** - Retrieve all ERC20 token balances for an address
+- **Account NFT Holdings** - Get the list of NFTs owned by an account
+- **Native Token Balance** - Query native token balance for an address
+
+#### Basic Blockchain Module (`basic.py`)
+- **Block Data Queries** - Get latest block number and block details
+- **Transaction Data** - Retrieve transaction details by hash or block position
+- **Account Transactions** - Get transaction history for an address
+- **Contract Function Calls** - Execute read-only contract function calls
+
+#### Token API Module (`token_api.py`)
+- **Token Metadata** - Retrieve token contract metadata
+- **Token Holders Analysis** - Get token holder distribution and top holders
+- **Token Price Data** - Current and historical token price information
+- **Token Transfer History** - Track ERC20 token transfers
+
 ### 💾 Storage - Decentralized Storage Tools
 **Path**: `storage/`
 
@@ -170,6 +203,12 @@ export THIRDWEB_CLIENT_ID="your_client_id"
 # RPC Node
 export RPC_URL="your_rpc_url"
 
+# Chainbase API
+export CHAINBASE_API_KEY="your_api_key"
+export CHAINBASE_HOST="0.0.0.0"  # Optional, default is 0.0.0.0
+export CHAINBASE_PORT="8000"     # Optional, default is 8000
+export CHAINBASE_PATH="/sse"     # Optional, default is /sse
+
 # Storage Service Configuration
 export AIOZ_ACCESS_KEY="your_access_key"
 export AIOZ_SECRET_KEY="your_secret_key"
@@ -218,6 +257,25 @@ from spoon_toolkits.storage.aioz.aioz_tools import AiozStorageTool
 
 tool = AiozStorageTool()
 result = await tool.upload_file(bucket_name="my-bucket", file_path="./file.txt")
+```
+
+#### 5. Chainbase Tools
+
+```python
+from spoon_toolkits.chainbase import GetLatestBlockNumberTool, GetAccountBalanceTool
+
+# 获取以太坊最新区块
+block_tool = GetLatestBlockNumberTool()
+block_result = await block_tool.execute(chain_id=1)
+print(f"最新区块: {block_result}")
+
+# 获取账户ETH余额
+balance_tool = GetAccountBalanceTool()
+balance_result = await balance_tool.execute(
+    chain_id=1,
+    address="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"  # vitalik.eth
+)
+print(f"账户余额: {balance_result}")
 ```
 
 ## 🔧 Tool Features
