@@ -1,8 +1,8 @@
 import asyncio
 from fastmcp import FastMCP
 import os
-from spoon_ai.tools.autonomys_auto_drive.mime_type import suffix_to_mime_type_dict
-from spoon_ai.tools.autonomys_auto_drive.http_client import autonomys_auto_drive_client
+from .mime_type import suffix_to_mime_type_dict
+from .http_client import autonomys_auto_drive_client
 
 mcp = FastMCP("AutonomysAutoDriveUploads")
 chunk_size_bytes = 1024**2

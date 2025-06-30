@@ -1,5 +1,5 @@
 from fastmcp import FastMCP
-from spoon_ai.tools.autonomys_auto_drive.http_client import autonomys_auto_drive_client
+from .http_client import autonomys_auto_drive_client
 
 mcp = FastMCP("AutonomysAutoDriveSubscriptions")
 

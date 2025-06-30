@@ -1,6 +1,6 @@
 from fastmcp import FastMCP
-from spoon_ai.tools.the_graph_token_api.http_client import the_graph_token_api_client
-from spoon_ai.tools.the_graph_token_api.utils import normalize_ethereum_contract_address
+from .http_client import the_graph_token_api_client
+from .utils import normalize_ethereum_contract_address
 
 mcp = FastMCP("TheGraphTokenApiBalancesByAddress")
 

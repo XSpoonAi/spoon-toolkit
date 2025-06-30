@@ -1,5 +1,5 @@
 import httpx
-from spoon_ai.tools.the_graph_token_api.env import THE_GRAPH_TOKEN_API_JWT
+from .env import THE_GRAPH_TOKEN_API_JWT
 
 async def raise_on_4xx_5xx(response):
     await response.aread()

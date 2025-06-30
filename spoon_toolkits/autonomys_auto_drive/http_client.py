@@ -1,5 +1,5 @@
 import httpx
-from spoon_ai.tools.autonomys_auto_drive.env import AUTONOMYS_AUTO_DRIVE_API_KEY, AUTONOMYS_AUTO_DRIVE_AUTH_PROVIDER
+from .env import AUTONOMYS_AUTO_DRIVE_API_KEY, AUTONOMYS_AUTO_DRIVE_AUTH_PROVIDER
 
 async def raise_on_4xx_5xx(response):
     await response.aread()
