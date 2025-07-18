@@ -86,8 +86,8 @@ class CryptoPowerDataCEXTool(CryptoPowerDataBaseTool):
         "required": ["exchange", "symbol"]
     }
 
-    exchange: str = Field(description="Exchange identifier (e.g., 'binance', 'coinbase', 'kraken')")
-    symbol: str = Field(description="Trading pair symbol (e.g., 'BTC/USDT', 'ETH/USD')")
+    exchange: Optional[str] = Field(default=None, description="Exchange identifier (e.g., 'binance', 'coinbase', 'kraken')")
+    symbol: Optional[str] = Field(default=None, description="Trading pair symbol (e.g., 'BTC/USDT', 'ETH/USD')")
     timeframe: str = Field(default="1h", description="Timeframe (e.g., '1m', '5m', '1h', '4h', '1d')")
     limit: int = Field(default=100, description="Number of candles to fetch (1-500)")
     indicators_config: str = Field(
@@ -106,6 +106,12 @@ class CryptoPowerDataCEXTool(CryptoPowerDataBaseTool):
             limit = kwargs.get('limit', self.limit)
             indicators_config = kwargs.get('indicators_config', self.indicators_config)
             use_enhanced = kwargs.get('use_enhanced', self.use_enhanced)
+
+            # Validate required parameters
+            if not exchange:
+                return ToolResult(error="Parameter 'exchange' is required")
+            if not symbol:
+                return ToolResult(error="Parameter 'symbol' is required")
 
             # Call the async function
             result = await get_cex_data_with_indicators(
@@ -174,8 +180,8 @@ class CryptoPowerDataDEXTool(CryptoPowerDataBaseTool):
         "required": ["chain_index", "token_address"]
     }
 
-    chain_index: str = Field(description="Blockchain chain index (e.g., '1' for Ethereum, '56' for BSC)")
-    token_address: str = Field(description="Token contract address")
+    chain_index: Optional[str] = Field(default=None, description="Blockchain chain index (e.g., '1' for Ethereum, '56' for BSC)")
+    token_address: Optional[str] = Field(default=None, description="Token contract address")
     timeframe: str = Field(default="1h", description="Timeframe (e.g., '1m', '1h', '4h', '1d')")
     limit: int = Field(default=100, description="Number of candles to fetch (1-300)")
     indicators_config: str = Field(
@@ -194,6 +200,12 @@ class CryptoPowerDataDEXTool(CryptoPowerDataBaseTool):
             limit = kwargs.get('limit', self.limit)
             indicators_config = kwargs.get('indicators_config', self.indicators_config)
             use_enhanced = kwargs.get('use_enhanced', self.use_enhanced)
+
+            # Validate required parameters
+            if not chain_index:
+                return ToolResult(error="Parameter 'chain_index' is required")
+            if not token_address:
+                return ToolResult(error="Parameter 'token_address' is required")
 
             # Call the async function
             result = await get_dex_data_with_indicators(
@@ -293,7 +305,7 @@ class CryptoPowerDataPriceTool(CryptoPowerDataBaseTool):
         "required": ["source"]
     }
 
-    source: str = Field(description="Data source: 'cex' or 'dex'")
+    source: Optional[str] = Field(default=None, description="Data source: 'cex' or 'dex'")
     # CEX parameters
     exchange: Optional[str] = Field(default=None, description="Exchange identifier (for CEX)")
     symbol: Optional[str] = Field(default=None, description="Trading symbol (for CEX)")
@@ -306,7 +318,13 @@ class CryptoPowerDataPriceTool(CryptoPowerDataBaseTool):
         """Execute price fetching"""
         try:
             # Override parameters with kwargs if provided
-            source = kwargs.get('source', self.source).lower()
+            source = kwargs.get('source', self.source)
+
+            # Validate required parameters
+            if not source:
+                return ToolResult(error="Parameter 'source' is required")
+
+            source = source.lower()
 
             if source == 'cex':
                 exchange = kwargs.get('exchange', self.exchange)
