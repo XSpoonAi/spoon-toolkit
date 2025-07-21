@@ -59,18 +59,18 @@ BITQUERY_API_KEY = "" # Should be loaded from environment variables in productio
 
 class PriceAlertProvider:
     """Base class for price alert data providers"""
-    
+
     async def check_price_threshold(self, symbol: str, threshold_percent: float) -> Dict[str, Any]:
         """Check if price exceeds the threshold percentage"""
         raise NotImplementedError("Subclasses must implement this method")
-    
+
     async def check_lp_range(self, position_id: int, buffer_ticks: int = 100) -> Dict[str, Any]:
         """Check if LP position is within the specified range"""
         raise NotImplementedError("Subclasses must implement this method")
-    
+
     async def monitor_sudden_price_increase(
-        self, 
-        min_market_cap: float = 500000000, 
+        self,
+        min_market_cap: float = 500000000,
         min_volume: float = 100000000,
         price_increase_percent: float = 100
     ) -> List[Dict[str, Any]]:
@@ -79,7 +79,7 @@ class PriceAlertProvider:
 
 class UniswapAlertProvider(PriceAlertProvider):
     """Uniswap price alert provider"""
-    
+
     def __init__(self, rpc_url: Optional[str] = None):
         self.rpc_url = rpc_url or "https://eth-mainnet.g.alchemy.com/v2/demo"
         self.w3 = Web3(HTTPProvider(self.rpc_url))
@@ -89,21 +89,21 @@ class UniswapAlertProvider(PriceAlertProvider):
             address=self.w3.to_checksum_address(UNISWAP_POSITION_MANAGER),
             abi=UNISWAP_POSITION_ABI
         )
-    
+
     async def check_price_threshold(self, symbol: str, threshold_percent: float) -> Dict[str, Any]:
         """Check if price exceeds the threshold percentage
-        
+
         Args:
             symbol: Trading pair symbol (e.g., "ETH-USDC")
             threshold_percent: Price change threshold percentage, positive for increase, negative for decrease
-        
+
         Returns:
             Alert result dictionary containing threshold exceeded status, current price, 24h price, change percentage, etc.
         """
         try:
             # Get 24-hour price change data
             price_data = await self.price_provider.get_ticker_24h(symbol)
-            
+
             if "error" in price_data:
                 return {
                     "success": False,
@@ -111,10 +111,10 @@ class UniswapAlertProvider(PriceAlertProvider):
                     "symbol": symbol,
                     "exceeded": False
                 }
-            
+
             # Calculate price change percentage
             price_change_percent = float(price_data.get("priceChangePercent", "0"))
-            
+
             # Determine if threshold is exceeded
             exceeded = False
             if threshold_percent > 0 and price_change_percent >= threshold_percent:
@@ -127,7 +127,7 @@ class UniswapAlertProvider(PriceAlertProvider):
                 message = f"Price decreased by {price_change_percent}%, exceeding threshold of {threshold_percent}%"
             else:
                 message = f"Price change ({price_change_percent}%) is within threshold ({threshold_percent}%)"
-            
+
             return {
                 "success": True,
                 "message": message,
@@ -146,47 +146,47 @@ class UniswapAlertProvider(PriceAlertProvider):
                 "symbol": symbol,
                 "exceeded": False
             }
-    
+
     async def check_lp_range(self, position_id: int, buffer_ticks: int = 100) -> Dict[str, Any]:
         """Check if LP position is within the specified range
-        
+
         Args:
             position_id: Uniswap V3 position ID
             buffer_ticks: Safety buffer zone near range boundaries (in ticks)
-        
+
         Returns:
             Alert result dictionary containing range status, current tick, tick range, etc.
         """
         try:
             # Get position information
             position = self.position_manager.functions.positions(position_id).call()
-            
+
             # Parse position information
             token0 = position[2]
             token1 = position[3]
             fee = position[4]
             tick_lower = position[5]
             tick_upper = position[6]
-            
+
             # Get pool address and current price information
             pool_address = self.price_provider._get_pool_address(token0, token1, fee)
             pool_contract = self.w3.eth.contract(address=pool_address, abi=UNISWAP_POOL_ABI)
-            
+
             # Get current tick
             slot0 = pool_contract.functions.slot0().call()
             current_tick = slot0[1]
-            
+
             # Determine if current price is in range and if it's near boundaries
             in_range = tick_lower <= current_tick <= tick_upper
-            
+
             # Calculate distance to boundaries in ticks
             distance_to_lower = current_tick - tick_lower
             distance_to_upper = tick_upper - current_tick
-            
+
             # Determine if near boundaries
             near_lower = in_range and distance_to_lower <= buffer_ticks
             near_upper = in_range and distance_to_upper <= buffer_ticks
-            
+
             # Get token symbols
             try:
                 token0_contract = self.w3.eth.contract(address=token0, abi=[{
@@ -207,14 +207,14 @@ class UniswapAlertProvider(PriceAlertProvider):
                     "stateMutability": "view",
                     "type": "function"
                 }])
-                
+
                 token0_symbol = token0_contract.functions.symbol().call()
                 token1_symbol = token1_contract.functions.symbol().call()
                 pair = f"{token0_symbol}-{token1_symbol}"
             except Exception as e:
                 logger.warning(f"Failed to get token symbols: {e}")
                 pair = f"{token0}-{token1}"
-            
+
             # Generate alert message
             if not in_range:
                 status = "OUT_OF_RANGE"
@@ -228,7 +228,7 @@ class UniswapAlertProvider(PriceAlertProvider):
             else:
                 status = "IN_RANGE"
                 message = f"LP position is safely in range. Current tick: {current_tick}, Range: [{tick_lower}, {tick_upper}]"
-            
+
             return {
                 "success": True,
                 "message": message,
@@ -250,7 +250,7 @@ class UniswapAlertProvider(PriceAlertProvider):
                 "message": f"Failed to check LP range: {str(e)}",
                 "position_id": position_id
             }
-    
+
     async def _get_coingecko_market_data(self, vs_currency: str = "usd", min_market_cap: float = 0, min_volume: float = 0) -> List[Dict]:
         """Get coin market data from CoinGecko that meets market cap and volume criteria"""
         try:
@@ -264,30 +264,40 @@ class UniswapAlertProvider(PriceAlertProvider):
                 "sparkline": "false",
                 "price_change_percentage": "24h"
             }
-            
+
             # Send request
             response = requests.get(url, params=params)
             response.raise_for_status()
             coins = response.json()
-            
+
             # Filter coins meeting market cap and volume criteria
             filtered_coins = [
                 coin for coin in coins
                 if coin.get("market_cap", 0) >= min_market_cap
                 and coin.get("total_volume", 0) >= min_volume
             ]
-            
+
             return filtered_coins
         except Exception as e:
             logger.error(f"Failed to get CoinGecko market data: {e}")
             return []
-    
+
     async def _get_bitquery_price_data(self, token_addresses: List[str]) -> Dict[str, Dict]:
         """Get token price data from Bitquery"""
         if not BITQUERY_API_KEY:
-            logger.error("Bitquery API key is not set")
-            return {}
-        
+            raise ValueError(
+                "Bitquery API key is not configured. Please set the BITQUERY_API_KEY environment variable.\n\n"
+                "To obtain a Bitquery API key:\n"
+                "1. Visit https://bitquery.io/\n"
+                "2. Sign up for an account or log in\n"
+                "3. Go to your dashboard and create an API key\n"
+                "4. Copy the API key\n"
+                "5. Add it to your .env file:\n"
+                "   BITQUERY_API_KEY=your_api_key_here\n\n"
+                "Note: This is different from BITQUERY_CLIENT_ID and BITQUERY_CLIENT_SECRET used for OAuth.\n"
+                "Manage your credentials at: https://bitquery.io/dashboard"
+            )
+
         # Build GraphQL query
         query = """
         query ($network: EthereumNetwork!, $token: String!) {
@@ -327,9 +337,9 @@ class UniswapAlertProvider(PriceAlertProvider):
           }
         }
         """
-        
+
         results = {}
-        
+
         # Send query for each token address
         for token in token_addresses:
             try:
@@ -337,12 +347,12 @@ class UniswapAlertProvider(PriceAlertProvider):
                     "network": "ethereum",
                     "token": token
                 }
-                
+
                 headers = {
                     "X-API-KEY": BITQUERY_API_KEY,
                     "Content-Type": "application/json"
                 }
-                
+
                 response = requests.post(
                     BITQUERY_API_URL,
                     json={"query": query, "variables": variables},
@@ -350,34 +360,34 @@ class UniswapAlertProvider(PriceAlertProvider):
                 )
                 response.raise_for_status()
                 data = response.json()
-                
+
                 # Check if there is trade data
                 dex_trades = data.get("data", {}).get("ethereum", {}).get("dexTrades", [])
                 if dex_trades:
                     results[token] = dex_trades[0]
-                
+
                 # Respect API rate limits
                 await asyncio.sleep(0.5)
-                
+
             except Exception as e:
                 logger.error(f"Failed to get Bitquery price data for token {token}: {e}")
                 continue
-        
+
         return results
-    
+
     async def monitor_sudden_price_increase(
-        self, 
-        min_market_cap: float = 500000000, 
+        self,
+        min_market_cap: float = 500000000,
         min_volume: float = 100000000,
         price_increase_percent: float = 100
     ) -> List[Dict[str, Any]]:
         """Monitor tokens with sudden significant price increases that meet specified criteria
-        
+
         Args:
             min_market_cap: Minimum market cap in USD
             min_volume: Minimum 24-hour trading volume in USD
             price_increase_percent: Price increase threshold percentage
-        
+
         Returns:
             List of tokens meeting criteria, each containing token information and price change
         """
@@ -387,16 +397,16 @@ class UniswapAlertProvider(PriceAlertProvider):
                 min_market_cap=min_market_cap,
                 min_volume=min_volume
             )
-            
+
             if not coins:
                 return []
-            
+
             # Find coins with price increase exceeding threshold
             sudden_increase_coins = []
-            
+
             for coin in coins:
                 price_change_24h = coin.get("price_change_percentage_24h", 0)
-                
+
                 # If 24h price increase exceeds threshold
                 if price_change_24h >= price_increase_percent:
                     sudden_increase_coins.append({
@@ -411,10 +421,10 @@ class UniswapAlertProvider(PriceAlertProvider):
                         "market_cap_rank": coin.get("market_cap_rank"),
                         "timestamp": int(time.time())
                     })
-            
+
             # Sort results by price increase in descending order
             return sorted(sudden_increase_coins, key=lambda x: x.get("price_change_24h_percent", 0), reverse=True)
-            
+
         except Exception as e:
             logger.error(f"Failed to monitor sudden price increase: {e}")
             return []
@@ -442,10 +452,10 @@ class PriceThresholdAlertTool(DexBaseTool):
         },
         "required": ["symbol", "threshold_percent"]
     }
-    
+
     # Provider instance cache
     _providers: Dict[str, PriceAlertProvider] = {}
-    
+
     def _get_provider(self, exchange: str) -> PriceAlertProvider:
         """Get or create price alert provider for specified exchange"""
         exchange = exchange.lower()
@@ -455,7 +465,7 @@ class PriceThresholdAlertTool(DexBaseTool):
             else:
                 raise ValueError(f"Unsupported exchange: {exchange}")
         return self._providers[exchange]
-    
+
     async def execute(self, symbol: str, threshold_percent: float, exchange: str = "uniswap") -> ToolResult:
         """Execute the tool"""
         try:
@@ -490,10 +500,10 @@ class LpRangeCheckTool(DexBaseTool):
         },
         "required": ["position_id"]
     }
-    
+
     # Reuse provider instances from price threshold tool
     _providers = PriceThresholdAlertTool._providers
-    
+
     def _get_provider(self, exchange: str) -> PriceAlertProvider:
         """Get or create price alert provider for specified exchange"""
         exchange = exchange.lower()
@@ -503,7 +513,7 @@ class LpRangeCheckTool(DexBaseTool):
             else:
                 raise ValueError(f"Unsupported exchange: {exchange}")
         return self._providers[exchange]
-    
+
     async def execute(self, position_id: int, buffer_ticks: int = 100, exchange: str = "uniswap") -> ToolResult:
         """Execute the tool"""
         try:
@@ -543,10 +553,10 @@ class SuddenPriceIncreaseTool(DexBaseTool):
             }
         }
     }
-    
+
     # Reuse provider instances from price threshold tool
     _providers = PriceThresholdAlertTool._providers
-    
+
     def _get_provider(self, exchange: str) -> PriceAlertProvider:
         """Get or create price alert provider for specified exchange"""
         exchange = exchange.lower()
@@ -556,10 +566,10 @@ class SuddenPriceIncreaseTool(DexBaseTool):
             else:
                 raise ValueError(f"Unsupported exchange: {exchange}")
         return self._providers[exchange]
-    
+
     async def execute(
-        self, 
-        min_market_cap: float = 500000000, 
+        self,
+        min_market_cap: float = 500000000,
         min_volume: float = 100000000,
         price_increase_percent: float = 100,
         exchange: str = "uniswap"
@@ -575,4 +585,4 @@ class SuddenPriceIncreaseTool(DexBaseTool):
             return ToolResult(output=results)
         except Exception as e:
             logger.error(f"Failed to monitor sudden price increase: {e}")
-            return ToolResult(error=f"Failed to monitor sudden price increase: {str(e)}") 
+            return ToolResult(error=f"Failed to monitor sudden price increase: {str(e)}")

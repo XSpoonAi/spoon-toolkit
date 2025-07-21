@@ -215,6 +215,8 @@ pip install -r requirements.txt
 
 ### Environment Variable Configuration
 
+Create a `.env` file in your project root or set these environment variables:
+
 ```bash
 # GoPlusLabs API
 export GOPLUS_API_KEY="your_api_key"
@@ -231,6 +233,11 @@ export CHAINBASE_HOST="0.0.0.0"  # Optional, default is 0.0.0.0
 export CHAINBASE_PORT="8000"     # Optional, default is 8000
 export CHAINBASE_PATH="/sse"     # Optional, default is /sse
 
+# Bitquery API (for blockchain data analysis)
+export BITQUERY_API_KEY="your_api_key"
+export BITQUERY_CLIENT_ID="your_client_id"
+export BITQUERY_CLIENT_SECRET="your_client_secret"
+
 # Storage Service Configuration
 export AIOZ_ACCESS_KEY="your_access_key"
 export AIOZ_SECRET_KEY="your_secret_key"
@@ -239,6 +246,16 @@ export FOUREVERLAND_SECRET_KEY="your_secret_key"
 export OORT_ACCESS_KEY="your_access_key"
 export OORT_SECRET_KEY="your_secret_key"
 ```
+
+### 🔑 API Setup Guides
+
+For detailed setup instructions for specific services:
+
+- **Bitquery API**: See [docs/BITQUERY_SETUP.md](docs/BITQUERY_SETUP.md) for comprehensive setup instructions
+- **GoPlusLabs**: Visit [https://gopluslabs.io/](https://gopluslabs.io/) to get your API key
+- **Chainbase**: Visit [https://chainbase.com/](https://chainbase.com/) to get your API key
+
+> **⚠️ Important**: If you encounter authentication errors when using any tools, the system will provide detailed instructions on where to obtain the required API credentials and how to configure them.
 
 ### Usage Examples
 
