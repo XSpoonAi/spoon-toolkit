@@ -125,6 +125,7 @@ class NeoProvider:
 
         Converts Neo addresses to script hash format if they are in standard format.
         If the address is already in script hash format, it returns as is.
+        Uses neo-mamba's built-in address validation (no RPC call needed).
 
         Args:
             address (str): The address to validate and convert
@@ -145,22 +146,9 @@ class NeoProvider:
                 return types.UInt160.from_string(address)
             else:
                 # Convert from standard Neo address format (base58)
-                # Try to validate via RPC first, but if it fails (e.g., connection issue),
-                # we'll still try to convert the address directly
-                try:
-                    is_valid = await self.rpc_client.validate_address(address)
-                    if not is_valid:
-                        raise ValueError(f"Invalid Neo address: {address}")
-                except Exception as rpc_error:
-                    # If RPC validation fails (e.g., connection issue), try direct conversion
-                    # The address_to_script_hash will raise ValueError if address is invalid
-                    pass
-                
-                # Convert address to script hash (this will validate the format)
-                try:
-                    return utils.address_to_script_hash(address)
-                except Exception as convert_error:
-                    raise ValueError(f"Invalid Neo address: {address} - {str(convert_error)}")
+                # Using neo-mamba's address_to_script_hash which validates the address format locally
+                # This will raise ValueError if the address is invalid
+                return utils.address_to_script_hash(address)
         except ValueError:
             # Re-raise ValueError as-is
             raise
