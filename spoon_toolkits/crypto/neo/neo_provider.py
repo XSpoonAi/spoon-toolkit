@@ -52,7 +52,75 @@ class NeoProvider:
         # Initialize neo-mamba RPC client
         self.rpc_client = NeoRpcClient(rpc_url)
 
-    def _validate_address(self, address: str) -> types.UInt160:
+    async def _make_request(self, method: str, params: dict) -> dict:
+        """Make a request to the Neo RPC API
+        
+        This method provides a unified interface for making RPC calls.
+        It handles the conversion of parameters and calls the appropriate
+        neo-mamba RPC client methods.
+        
+        NOTE: Many tools call this with method names that don't match neo-mamba's
+        JSON-RPC API. These appear to be from a different API (possibly NeoScan).
+        This implementation provides basic mappings for common methods.
+        
+        Args:
+            method (str): The RPC method name
+            params (dict): Parameters for the RPC call
+            
+        Returns:
+            dict: The response from the RPC call
+        """
+        # Map common method names to neo-mamba RPC client methods
+        method_mappings = {
+            "ValidateAddress": self._make_validate_address,
+            "GetNetworkInfo": self._make_get_network_info,
+            # Add more mappings as needed
+        }
+        
+        if method in method_mappings:
+            return await method_mappings[method](params)
+        else:
+            # For unmapped methods, try to use the RPC client's _do_post directly
+            # This is a fallback for methods that might work with standard JSON-RPC
+            raise NotImplementedError(
+                f"Method '{method}' is not yet implemented. "
+                f"This method appears to require a different API endpoint than "
+                f"the standard Neo JSON-RPC API. You may need to use a NeoScan API "
+                f"or similar service. Available mapped methods: {list(method_mappings.keys())}"
+            )
+    
+    async def _make_validate_address(self, params: dict) -> dict:
+        """Handle ValidateAddress request"""
+        address = params.get("address", "")
+        try:
+            validated = await self._validate_address(address)
+            return {
+                "isValid": True,
+                "address": address,
+                "scriptHash": str(validated)
+            }
+        except Exception as e:
+            return {
+                "isValid": False,
+                "address": address,
+                "error": str(e)
+            }
+    
+    async def _make_get_network_info(self, params: dict) -> dict:
+        """Handle GetNetworkInfo request"""
+        try:
+            # Get basic network info from RPC client
+            block_count = await self.rpc_client.get_block_count()
+            # Add more network info as available
+            return {
+                "blockCount": block_count,
+                "network": self.network,
+                "rpcUrl": self.rpc_client.url
+            }
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def _validate_address(self, address: str) -> types.UInt160:
         """Validate and convert address format
 
         Converts Neo addresses to script hash format if they are in standard format.
@@ -67,18 +135,38 @@ class NeoProvider:
         Raises:
             ValueError: If the address is not a valid Neo address
         """
+        from neo3.wallet import utils
+        
         try:
-            # Try to parse as script hash first
+            # Try to parse as script hash first (hex format)
             if address.startswith("0x"):
                 return types.UInt160.from_string(address[2:])
-            else:
+            elif len(address) == 40:  # Hex string without 0x prefix
                 return types.UInt160.from_string(address)
-        except:
-            # If that fails, try to convert from standard address format
-            try:
-                return self.rpc_client.validate_address(address)
-            except:
-                raise ValueError(f"Invalid Neo address: {address}")
+            else:
+                # Convert from standard Neo address format (base58)
+                # Try to validate via RPC first, but if it fails (e.g., connection issue),
+                # we'll still try to convert the address directly
+                try:
+                    is_valid = await self.rpc_client.validate_address(address)
+                    if not is_valid:
+                        raise ValueError(f"Invalid Neo address: {address}")
+                except Exception as rpc_error:
+                    # If RPC validation fails (e.g., connection issue), try direct conversion
+                    # The address_to_script_hash will raise ValueError if address is invalid
+                    pass
+                
+                # Convert address to script hash (this will validate the format)
+                try:
+                    return utils.address_to_script_hash(address)
+                except Exception as convert_error:
+                    raise ValueError(f"Invalid Neo address: {address} - {str(convert_error)}")
+        except ValueError:
+            # Re-raise ValueError as-is
+            raise
+        except Exception as e:
+            # For any other exception, raise with context
+            raise ValueError(f"Invalid Neo address: {address} - {str(e)}")
 
     def _handle_response(self, result: Any) -> Any:
         """Handle neo-mamba response and extract result
@@ -163,13 +251,15 @@ class NeoProvider:
             Dict[str, Any]: Address information including first use time, last use time, etc.
         """
         try:
-            validated_address = self._validate_address(address)
+            validated_address = await self._validate_address(address)
+            # Convert UInt160 to string for RPC call (get_nep17_balances expects string)
+            script_hash_str = str(validated_address)
             # Get NEP-17 balances for the address
-            balances = await self.rpc_client.get_nep17_balances(validated_address)
+            balances = await self.rpc_client.get_nep17_balances(script_hash_str)
             return self._handle_response({
                 "address": address,
                 "balances": balances,
-                "script_hash": str(validated_address)
+                "script_hash": script_hash_str
             })
         except Exception as e:
             raise Exception(f"Failed to get address info: {str(e)}")

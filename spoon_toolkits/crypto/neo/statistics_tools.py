@@ -23,7 +23,7 @@ class GetNetworkStatisticsTool(BaseTool):
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetNetworkStatistics", {})
+            response = await provider._make_request("GetNetworkStatistics", {})
             result = provider._handle_response(response)
             return ToolResult(output=f"Network statistics: {result}")
         except Exception as e:
@@ -63,7 +63,7 @@ class GetTransactionStatisticsTool(BaseTool):
             if end_time:
                 params["end_time"] = end_time
             
-            response = provider._make_request("GetTransactionStatistics", params)
+            response = await provider._make_request("GetTransactionStatistics", params)
             result = provider._handle_response(response)
             return ToolResult(output=f"Transaction statistics: {result}")
         except Exception as e:
@@ -93,7 +93,7 @@ class GetAddressStatisticsTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetAddressStatistics", {
+            response = await provider._make_request("GetAddressStatistics", {
                 "address": address
             })
             result = provider._handle_response(response)
@@ -125,7 +125,7 @@ class GetContractStatisticsTool(BaseTool):
     async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetContractStatistics", {
+            response = await provider._make_request("GetContractStatistics", {
                 "contract_hash": contract_hash
             })
             result = provider._handle_response(response)

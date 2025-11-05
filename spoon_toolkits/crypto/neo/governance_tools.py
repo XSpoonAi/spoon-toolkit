@@ -23,7 +23,7 @@ class GetCommitteeInfoTool(BaseTool):
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetCommitteeInfo", {})
+            response = await provider._make_request("GetCommitteeInfo", {})
             result = provider._handle_response(response)
             return ToolResult(output=f"Committee info: {result}")
         except Exception as e:

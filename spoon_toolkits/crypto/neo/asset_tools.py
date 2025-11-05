@@ -22,7 +22,7 @@ class GetAssetCountTool(BaseTool):
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetAssetCount", {})
+            response = await provider._make_request("GetAssetCount", {})
             result = provider._handle_response(response)
             return ToolResult(output=f"Asset count: {result}")
         except Exception as e:
@@ -51,7 +51,7 @@ class GetAssetInfoByHashTool(BaseTool):
     async def execute(self, asset_hash: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetAssetInfoByHash", {"AssetHash": asset_hash})
+            response = await provider._make_request("GetAssetInfoByHash", {"AssetHash": asset_hash})
             result = provider._handle_response(response)
             return ToolResult(output=f"Asset info: {result}")
         except Exception as e:
@@ -80,7 +80,7 @@ class GetAssetInfoByNameTool(BaseTool):
     async def execute(self, asset_name: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetAssetInfoByName", {"AssetName": asset_name})
+            response = await provider._make_request("GetAssetInfoByName", {"AssetName": asset_name})
             result = provider._handle_response(response)
             return ToolResult(output=f"Asset info: {result}")
         except Exception as e:
@@ -109,8 +109,8 @@ class GetAssetsInfoByUserAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
-            response = provider._make_request("GetAssetsInfoByUserAddress", {"Address": validated_address})
+            validated_address = await provider._validate_address(address)
+            response = await provider._make_request("GetAssetsInfoByUserAddress", {"Address": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"Assets info: {result}")
         except Exception as e:
@@ -143,8 +143,8 @@ class GetAssetInfoByAssetAndAddressTool(BaseTool):
     async def execute(self, asset_hash: str, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
-            response = provider._make_request("GetAssetInfoByAssetAndAddress", {
+            validated_address = await provider._validate_address(address)
+            response = await provider._make_request("GetAssetInfoByAssetAndAddress", {
                 "AssetHash": asset_hash,
                 "Address": validated_address
             })

@@ -38,7 +38,7 @@ class InvokeContractTool(BaseTool):
     async def execute(self, contract_hash: str, method: str, params: list = None, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("InvokeContract", {
+            response = await provider._make_request("InvokeContract", {
                 "contract_hash": contract_hash,
                 "method": method,
                 "params": params or []
@@ -83,7 +83,7 @@ class TestInvokeContractTool(BaseTool):
     async def execute(self, contract_hash: str, method: str, params: list = None, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("TestInvokeContract", {
+            response = await provider._make_request("TestInvokeContract", {
                 "contract_hash": contract_hash,
                 "method": method,
                 "params": params or []
@@ -117,7 +117,7 @@ class GetContractStateTool(BaseTool):
     async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetContractState", {
+            response = await provider._make_request("GetContractState", {
                 "contract_hash": contract_hash
             })
             result = provider._handle_response(response)

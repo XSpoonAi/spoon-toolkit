@@ -27,7 +27,7 @@ class ValidateAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("ValidateAddress", {
+            response = await provider._make_request("ValidateAddress", {
                 "address": address
             })
             result = provider._handle_response(response)
@@ -65,7 +65,7 @@ class ConvertAddressTool(BaseTool):
     async def execute(self, address: str, format: str = "address", network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("ConvertAddress", {
+            response = await provider._make_request("ConvertAddress", {
                 "address": address,
                 "format": format
             })
@@ -94,7 +94,7 @@ class GetNetworkInfoTool(BaseTool):
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetNetworkInfo", {})
+            response = await provider._make_request("GetNetworkInfo", {})
             result = provider._handle_response(response)
             return ToolResult(output=f"Network info: {result}")
         except Exception as e:

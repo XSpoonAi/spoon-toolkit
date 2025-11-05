@@ -22,7 +22,7 @@ class GetCandidateCountTool(BaseTool):
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetCandidateCount", {})
+            response = await provider._make_request("GetCandidateCount", {})
             result = provider._handle_response(response)
             return ToolResult(output=f"Candidate count: {result}")
         except Exception as e:
@@ -51,8 +51,8 @@ class GetCandidateByAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
-            response = provider._make_request("GetCandidateByAddress", {"Address": validated_address})
+            validated_address = await provider._validate_address(address)
+            response = await provider._make_request("GetCandidateByAddress", {"Address": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"Candidate info: {result}")
         except Exception as e:
@@ -81,8 +81,8 @@ class GetCandidateByVoterAddressTool(BaseTool):
     async def execute(self, voter_address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(voter_address)
-            response = provider._make_request("GetCandidateByVoterAddress", {"VoterAddress": validated_address})
+            validated_address = await provider._validate_address(voter_address)
+            response = await provider._make_request("GetCandidateByVoterAddress", {"VoterAddress": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"Candidate info: {result}")
         except Exception as e:
@@ -111,8 +111,8 @@ class GetScVoteCallByCandidateAddressTool(BaseTool):
     async def execute(self, candidate_address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(candidate_address)
-            response = provider._make_request("GetScVoteCallByCandidateAddress", {"CandidateAddress": validated_address})
+            validated_address = await provider._validate_address(candidate_address)
+            response = await provider._make_request("GetScVoteCallByCandidateAddress", {"CandidateAddress": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"Vote calls: {result}")
         except Exception as e:
@@ -141,7 +141,7 @@ class GetScVoteCallByTransactionHashTool(BaseTool):
     async def execute(self, transaction_hash: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetScVoteCallByTransactionHash", {"TransactionHash": transaction_hash})
+            response = await provider._make_request("GetScVoteCallByTransactionHash", {"TransactionHash": transaction_hash})
             result = provider._handle_response(response)
             return ToolResult(output=f"Vote calls: {result}")
         except Exception as e:
@@ -170,8 +170,8 @@ class GetScVoteCallByVoterAddressTool(BaseTool):
     async def execute(self, voter_address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(voter_address)
-            response = provider._make_request("GetScVoteCallByVoterAddress", {"VoterAddress": validated_address})
+            validated_address = await provider._validate_address(voter_address)
+            response = await provider._make_request("GetScVoteCallByVoterAddress", {"VoterAddress": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"Vote calls: {result}")
         except Exception as e:
@@ -200,8 +200,8 @@ class GetVotersByCandidateAddressTool(BaseTool):
     async def execute(self, candidate_address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(candidate_address)
-            response = provider._make_request("GetVotersByCandidateAddress", {"CandidateAddress": validated_address})
+            validated_address = await provider._validate_address(candidate_address)
+            response = await provider._make_request("GetVotersByCandidateAddress", {"CandidateAddress": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"Voters: {result}")
         except Exception as e:
@@ -230,8 +230,8 @@ class GetVotesByCandidateAddressTool(BaseTool):
     async def execute(self, candidate_address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(candidate_address)
-            response = provider._make_request("GetVotesByCandidateAddress", {"CandidateAddress": validated_address})
+            validated_address = await provider._validate_address(candidate_address)
+            response = await provider._make_request("GetVotesByCandidateAddress", {"CandidateAddress": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"Votes: {result}")
         except Exception as e:
@@ -256,7 +256,7 @@ class GetTotalVotesTool(BaseTool):
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetTotalVotes", {})
+            response = await provider._make_request("GetTotalVotes", {})
             result = provider._handle_response(response)
             return ToolResult(output=f"Total votes: {result}")
         except Exception as e:

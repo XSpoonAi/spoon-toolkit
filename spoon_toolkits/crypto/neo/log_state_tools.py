@@ -27,7 +27,7 @@ class GetApplicationLogTool(BaseTool):
     async def execute(self, transaction_hash: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetApplicationLog", {
+            response = await provider._make_request("GetApplicationLog", {
                 "transaction_hash": transaction_hash
             })
             result = provider._handle_response(response)
@@ -59,7 +59,7 @@ class GetApplicationStateTool(BaseTool):
     async def execute(self, application_hash: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetApplicationState", {
+            response = await provider._make_request("GetApplicationState", {
                 "application_hash": application_hash
             })
             result = provider._handle_response(response)

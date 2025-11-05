@@ -22,7 +22,7 @@ class GetContractCountTool(BaseTool):
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetContractCount", {})
+            response = await provider._make_request("GetContractCount", {})
             result = provider._handle_response(response)
             return ToolResult(output=f"Contract count: {result}")
         except Exception as e:
@@ -51,7 +51,7 @@ class GetContractByHashTool(BaseTool):
     async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetContractByHash", {"ContractHash": contract_hash})
+            response = await provider._make_request("GetContractByHash", {"ContractHash": contract_hash})
             result = provider._handle_response(response)
             return ToolResult(output=f"Contract info: {result}")
         except Exception as e:
@@ -80,7 +80,7 @@ class GetContractListByNameTool(BaseTool):
     async def execute(self, contract_name: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetContractListByName", {"ContractName": contract_name})
+            response = await provider._make_request("GetContractListByName", {"ContractName": contract_name})
             result = provider._handle_response(response)
             return ToolResult(output=f"Contract list: {result}")
         except Exception as e:
@@ -109,7 +109,7 @@ class GetVerifiedContractByContractHashTool(BaseTool):
     async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetVerifiedContractByContractHash", {"ContractHash": contract_hash})
+            response = await provider._make_request("GetVerifiedContractByContractHash", {"ContractHash": contract_hash})
             result = provider._handle_response(response)
             return ToolResult(output=f"Verified contract info: {result}")
         except Exception as e:
@@ -134,7 +134,7 @@ class GetVerifiedContractTool(BaseTool):
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetVerifiedContract", {})
+            response = await provider._make_request("GetVerifiedContract", {})
             result = provider._handle_response(response)
             return ToolResult(output=f"Verified contracts: {result}")
         except Exception as e:
@@ -163,7 +163,7 @@ class GetSourceCodeByContractHashTool(BaseTool):
     async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetSourceCodeByContractHash", {"ContractHash": contract_hash})
+            response = await provider._make_request("GetSourceCodeByContractHash", {"ContractHash": contract_hash})
             result = provider._handle_response(response)
             return ToolResult(output=f"Source code: {result}")
         except Exception as e:
