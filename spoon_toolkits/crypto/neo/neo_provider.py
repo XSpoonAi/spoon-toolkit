@@ -74,11 +74,23 @@ class NeoProvider:
             else:
                 return types.UInt160.from_string(address)
         except:
-            # If that fails, try to convert from standard address format
+            # If that fails, try to convert from standard address format using RPC
             try:
-                return await self.rpc_client.validate_address(address)
-            except:
-                raise ValueError(f"Invalid Neo address: {address}")
+                validation_result = await self.rpc_client.validate_address(address)
+                # validate_address returns a dict with 'script_hash' field
+                if isinstance(validation_result, dict) and 'script_hash' in validation_result:
+                    script_hash = validation_result['script_hash']
+                    # Remove 0x prefix if present
+                    if script_hash.startswith("0x"):
+                        return types.UInt160.from_string(script_hash[2:])
+                    return types.UInt160.from_string(script_hash)
+                # If it's already a UInt160, return it
+                elif isinstance(validation_result, types.UInt160):
+                    return validation_result
+                else:
+                    raise ValueError(f"Unexpected validation result format: {validation_result}")
+            except Exception as e:
+                raise ValueError(f"Invalid Neo address: {address} - {str(e)}")
 
     def _handle_response(self, result: Any) -> Any:
         """Handle neo-mamba response and extract result
@@ -165,7 +177,9 @@ class NeoProvider:
         try:
             validated_address = await self._validate_address(address)
             # Get NEP-17 balances for the address
-            balances = await self.rpc_client.get_nep17_balances(validated_address)
+            # get_nep17_balances expects address as string in hex format (0x + hex)
+            address_str = "0x" + str(validated_address)
+            balances = await self.rpc_client.get_nep17_balances(address_str)
             return self._handle_response({
                 "address": address,
                 "balances": balances,
