@@ -294,10 +294,14 @@ result = await tool.execute(symbol="ETH-USDC", exchange="uniswap")
 #### 3. Neo Blockchain Query
 
 ```python
-from spoon_toolkits.neo.tool_collection import getAddressInfoByAddress
+from spoon_toolkits.crypto.neo import NeoProvider
 
 # Query Neo address information
-address_info = getAddressInfoByAddress("NiEtVMWVYgpXrWkRTMwRaMJtJ41gD3912N")
+async def get_address_info_example():
+    provider = NeoProvider(network="testnet")  # or "mainnet"
+    address_info = await provider.get_address_info("NiEtVMWVYgpXrWkRTMwRaMJtJ41gD3912N")
+    await provider.close()  # Clean up connection
+    return address_info
 ```
 
 #### 4. Decentralized Storage

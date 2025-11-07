@@ -51,7 +51,7 @@ class GetCandidateByAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
+            validated_address = await provider._validate_address(address)
             response = provider._make_request("GetCandidateByAddress", {"Address": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"Candidate info: {result}")
@@ -81,7 +81,7 @@ class GetCandidateByVoterAddressTool(BaseTool):
     async def execute(self, voter_address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(voter_address)
+            validated_address = await provider._validate_address(voter_address)
             response = provider._make_request("GetCandidateByVoterAddress", {"VoterAddress": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"Candidate info: {result}")
@@ -111,7 +111,7 @@ class GetScVoteCallByCandidateAddressTool(BaseTool):
     async def execute(self, candidate_address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(candidate_address)
+            validated_address = await provider._validate_address(candidate_address)
             response = provider._make_request("GetScVoteCallByCandidateAddress", {"CandidateAddress": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"Vote calls: {result}")
@@ -170,7 +170,7 @@ class GetScVoteCallByVoterAddressTool(BaseTool):
     async def execute(self, voter_address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(voter_address)
+            validated_address = await provider._validate_address(voter_address)
             response = provider._make_request("GetScVoteCallByVoterAddress", {"VoterAddress": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"Vote calls: {result}")
@@ -200,7 +200,7 @@ class GetVotersByCandidateAddressTool(BaseTool):
     async def execute(self, candidate_address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(candidate_address)
+            validated_address = await provider._validate_address(candidate_address)
             response = provider._make_request("GetVotersByCandidateAddress", {"CandidateAddress": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"Voters: {result}")
@@ -230,7 +230,7 @@ class GetVotesByCandidateAddressTool(BaseTool):
     async def execute(self, candidate_address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(candidate_address)
+            validated_address = await provider._validate_address(candidate_address)
             response = provider._make_request("GetVotesByCandidateAddress", {"CandidateAddress": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"Votes: {result}")

@@ -52,7 +52,7 @@ class NeoProvider:
         # Initialize neo-mamba RPC client
         self.rpc_client = NeoRpcClient(rpc_url)
 
-    def _validate_address(self, address: str) -> types.UInt160:
+    async def _validate_address(self, address: str) -> types.UInt160:
         """Validate and convert address format
 
         Converts Neo addresses to script hash format if they are in standard format.
@@ -76,7 +76,7 @@ class NeoProvider:
         except:
             # If that fails, try to convert from standard address format
             try:
-                return self.rpc_client.validate_address(address)
+                return await self.rpc_client.validate_address(address)
             except:
                 raise ValueError(f"Invalid Neo address: {address}")
 
@@ -163,7 +163,7 @@ class NeoProvider:
             Dict[str, Any]: Address information including first use time, last use time, etc.
         """
         try:
-            validated_address = self._validate_address(address)
+            validated_address = await self._validate_address(address)
             # Get NEP-17 balances for the address
             balances = await self.rpc_client.get_nep17_balances(validated_address)
             return self._handle_response({

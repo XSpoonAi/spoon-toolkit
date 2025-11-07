@@ -160,7 +160,7 @@ class GetTotalSentAndReceivedTool(BaseTool):
     async def execute(self, contract_hash: str, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
+            validated_address = await provider._validate_address(address)
 
             # Note: neo-mamba doesn't have GetTotalSentAndReceived method
             # We'll use get_nep17_transfers to get transfer history
@@ -214,7 +214,7 @@ class GetRawTransactionByAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
+            validated_address = await provider._validate_address(address)
             # Note: neo-mamba doesn't have GetRawTransactionByAddress method
             # We'll use get_nep17_transfers as an alternative
             transfers = await provider.rpc_client.get_nep17_transfers(validated_address)
@@ -245,7 +245,7 @@ class GetTransferByAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
+            validated_address = await provider._validate_address(address)
             # Use neo-mamba's get_nep17_transfers method
             transfers = await provider.rpc_client.get_nep17_transfers(validated_address)
             return ToolResult(output=f"Transfer data: {transfers}")
@@ -275,7 +275,7 @@ class GetNep11OwnedByAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
+            validated_address = await provider._validate_address(address)
             # Note: neo-mamba doesn't have a direct NEP-11 method
             # NEP-11 tokens would need to be queried through contract interactions
             return ToolResult(output="NEP-11 token ownership query not available with current neo-mamba implementation")

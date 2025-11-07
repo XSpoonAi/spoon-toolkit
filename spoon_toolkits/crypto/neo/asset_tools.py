@@ -109,7 +109,7 @@ class GetAssetsInfoByUserAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
+            validated_address = await provider._validate_address(address)
             response = provider._make_request("GetAssetsInfoByUserAddress", {"Address": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"Assets info: {result}")
@@ -143,7 +143,7 @@ class GetAssetInfoByAssetAndAddressTool(BaseTool):
     async def execute(self, asset_hash: str, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
+            validated_address = await provider._validate_address(address)
             response = provider._make_request("GetAssetInfoByAssetAndAddress", {
                 "AssetHash": asset_hash,
                 "Address": validated_address

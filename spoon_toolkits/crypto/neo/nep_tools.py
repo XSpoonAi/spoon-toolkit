@@ -34,7 +34,7 @@ class GetNep11BalanceTool(BaseTool):
     async def execute(self, address: str, asset_hash: str, token_id: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
+            validated_address = await provider._validate_address(address)
             response = provider._make_request("GetNep11Balance", {
                 "ContractHash": asset_hash,
                 "Address": validated_address,
@@ -68,7 +68,7 @@ class GetNep11OwnedByAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
+            validated_address = await provider._validate_address(address)
             response = provider._make_request("GetNep11OwnedByAddress", {"Address": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"NEP-11 tokens: {result}")
@@ -102,7 +102,7 @@ class GetNep11ByAddressAndHashTool(BaseTool):
     async def execute(self, address: str, asset_hash: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
+            validated_address = await provider._validate_address(address)
             response = provider._make_request("GetNep11ByAddressAndHash", {
                 "Address": validated_address,
                 "ContractHash": asset_hash
@@ -135,7 +135,7 @@ class GetNep11TransferByAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
+            validated_address = await provider._validate_address(address)
             response = provider._make_request("GetNep11TransferByAddress", {"Address": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"NEP-11 transfers: {result}")
@@ -223,7 +223,7 @@ class GetNep11TransferCountByAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
+            validated_address = await provider._validate_address(address)
             response = provider._make_request("GetNep11TransferCountByAddress", {"Address": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"NEP-11 transfer count: {result}")
@@ -253,7 +253,7 @@ class GetNep17TransferByAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
+            validated_address = await provider._validate_address(address)
             response = provider._make_request("GetNep17TransferByAddress", {"Address": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"NEP-17 transfers: {result}")
@@ -370,7 +370,7 @@ class GetNep17TransferCountByAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
+            validated_address = await provider._validate_address(address)
             response = provider._make_request("GetNep17TransferCountByAddress", {"Address": validated_address})
             result = provider._handle_response(response)
             return ToolResult(output=f"NEP-17 transfer count: {result}")
