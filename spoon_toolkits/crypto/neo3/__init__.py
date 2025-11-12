@@ -55,6 +55,7 @@ from .governance_tools import (
 # Utility tools
 from .utility_tools import (
     ValidateAddressTool,
+    GetUnclaimedGasTool,
 )
 
 __all__ = [
@@ -95,5 +96,6 @@ __all__ = [
     
     # Utility tools
     "ValidateAddressTool",
+    "GetUnclaimedGasTool",
 ]
 

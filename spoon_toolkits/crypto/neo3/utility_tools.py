@@ -36,3 +36,32 @@ class ValidateAddressTool(BaseTool):
         except Exception as e:
             return ToolResult(error=str(e))
 
+
+class GetUnclaimedGasTool(BaseTool):
+    name: str = "get_unclaimed_gas"
+    description: str = "Get unclaimed gas for a Neo N3 address. Useful when you need to check available unclaimed gas that can be claimed by the address, calculate claimable rewards, or monitor gas accumulation. Returns the unclaimed gas amount as a string."
+    parameters: dict = {
+        "type": "object",
+        "properties": {
+            "address": {
+                "type": "string",
+                "description": "Neo N3 address to get unclaimed gas for"
+            },
+            "network": {
+                "type": "string",
+                "description": "Neo network type, must be 'mainnet' or 'testnet'",
+                "enum": ["mainnet", "testnet"],
+                "default": "testnet"
+            }
+        },
+        "required": ["address"]
+    }
+
+    async def execute(self, address: str, network: str = "testnet") -> ToolResult:
+        try:
+            provider = get_provider(network)
+            result = await provider.get_unclaimed_gas(address)
+            return ToolResult(output=f"Unclaimed gas: {result}")
+        except Exception as e:
+            return ToolResult(error=str(e))
+
