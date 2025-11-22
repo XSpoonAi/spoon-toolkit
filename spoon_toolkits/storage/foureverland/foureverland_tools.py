@@ -6,9 +6,9 @@ from ..base_storge_tool import S3Tool
 
 class FourEverlandStorageTool(S3Tool):
     """S3Tool implementation for 4EVERLAND Storage."""
-    endpoint_env_key: str = "FOREVERLAND_ENDPOINT_URL"
-    aws_access_key_id: str = "FOREVERLAND_ACCESS_KEY"
-    aws_secret_access_key: str = "FOREVERLAND_SECRET_KEY"
+    endpoint_env_key: str = "FOUREVERLAND_ENDPOINT_URL"
+    aws_access_key_id: str = "FOUREVERLAND_ACCESS_KEY"
+    aws_secret_access_key: str = "FOUREVERLAND_SECRET_KEY"
 
 
 class UploadFileToFourEverland(FourEverlandStorageTool):
@@ -97,54 +97,8 @@ async def test_list_foureverland_buckets():
     print("🧪 List 4EVERLAND Buckets:\n", result)
 
 
-async def test_upload_file_to_foureverland():
-    bucket_name = os.getenv("FOREVERLAND_BUCKET_NAME")
-    file_path = "/Users/weixiaole/Downloads/file1.txt"
-
-    # Create test file
-    with open(file_path, 'w') as f:
-        f.write("🌍 4EVERLAND test content")
-
-    tool = UploadFileToFourEverland()
-    result = await tool.execute(bucket_name=bucket_name, file_path=file_path)
-    print("🧪 Upload File Result:\n", result)
-
-
-async def test_generate_presigned_url_foureverland():
-    bucket_name = os.getenv("FOREVERLAND_BUCKET_NAME")
-    object_key = "file1.txt"
-
-    tool = GenerateFourEverlandPresignedUrl()
-    result = await tool.execute(bucket_name=bucket_name, object_key=object_key, expires_in=600)
-    print("🧪 Generate Presigned URL Result:\n", result)
-
-
-async def test_download_file_from_foureverland():
-    bucket_name = os.getenv("FOREVERLAND_BUCKET_NAME")
-    object_key = "file1.txt"
-    download_path = "/Users/weixiaole/Downloads/test_file_downloaded.txt"
-
-    tool = DownloadFileFromFourEverland()
-    result = await tool.execute(bucket_name=bucket_name, object_key=object_key, download_path=download_path)
-    print("🧪 Download File Result:\n", result)
-
-
-async def test_delete_foureverland_object():
-    bucket_name = os.getenv("FOREVERLAND_BUCKET_NAME")
-    object_key = "file1.txt"
-
-    tool = DeleteFourEverlandObject()
-    result = await tool.execute(bucket_name=bucket_name, object_key=object_key)
-    print("🧪 Delete Object Result:\n", result)
-
-
 if __name__ == '__main__':
     async def run_all_foureverland_tests():
         await test_list_foureverland_buckets()
-        await test_upload_file_to_foureverland()
-        await test_generate_presigned_url_foureverland()
-        await test_download_file_from_foureverland()
-        await test_delete_foureverland_object()
-
 
     asyncio.run(run_all_foureverland_tests())
