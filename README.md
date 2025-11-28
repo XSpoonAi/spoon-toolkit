@@ -129,6 +129,45 @@ Specialized toolkit for Neo blockchain:
   - Voter address queries
   - Governance participation analysis
 
+### 🌐 Neo3 - Neo N3 Blockchain Tools (Official RPC Methods Only)
+**Path**: `neo3/`
+
+Neo N3 blockchain tools using **only official RPC API methods** as documented at [developers.neo.org](https://developers.neo.org/docs/n3/reference/rpc/api).
+
+**Key Features:**
+- ✅ **22 Tools** covering all official Neo N3 RPC methods
+- ✅ **100% Compatibility** with any Neo N3 RPC node
+- ✅ **No Third-Party Dependencies** - only official RPC methods
+- ✅ **Comprehensive Testing** - dedicated test file for each tool module
+
+**Available Tool Categories:**
+- **Block Tools** (6) - Block queries, headers, hashes
+- **Transaction Tools** (4) - Transaction data, mempool, application logs
+- **NEP Tools** (5) - NEP-17 and NEP-11 token operations
+- **Contract Tools** (4) - Contract state, storage, function invocation
+- **Governance Tools** (2) - Committee and validators
+- **Utility Tools** (1) - Address validation
+
+**Usage Example:**
+```python
+from spoon_toolkits.crypto.neo3 import (
+    GetBlockCountTool,
+    GetNep17BalancesTool,
+    GetContractStateTool,
+    Neo3Provider
+)
+
+# Use tools
+tool = GetBlockCountTool()
+result = await tool.execute("mainnet")
+
+# Or use provider directly
+provider = Neo3Provider(network="mainnet")
+block_count = await provider.get_block_count()
+```
+
+See [neo3/README.md](spoon_toolkits/crypto/neo3/README.md) for complete documentation and usage examples.
+
 ### 🌐 ThirdWeb - Web3 Development Tools
 **Path**: `third_web/`
 
@@ -300,6 +339,34 @@ from spoon_toolkits.neo.tool_collection import getAddressInfoByAddress
 address_info = getAddressInfoByAddress("NiEtVMWVYgpXrWkRTMwRaMJtJ41gD3912N")
 ```
 
+#### 3b. Neo3 Blockchain Query (Official RPC Methods Only)
+
+```python
+import asyncio
+from spoon_toolkits.crypto.neo3 import (
+    GetBlockCountTool,
+    GetNep17BalancesTool,
+    Neo3Provider
+)
+
+async def neo3_example():
+    # Using tools
+    block_tool = GetBlockCountTool()
+    result = await block_tool.execute("mainnet")
+    print(f"Block count: {result.output}")
+    
+    # Using provider directly
+    provider = Neo3Provider(network="mainnet")
+    try:
+        address = "NUqLhf1p1vQyP2KJjMcEwmdEBPnbCGouVp"
+        balances = await provider.get_nep17_balances(address)
+        print(f"NEP-17 balances: {balances}")
+    finally:
+        await provider.close()
+
+asyncio.run(neo3_example())
+```
+
 #### 4. Decentralized Storage
 
 ```python
@@ -380,7 +447,7 @@ print(f"DEX Token Price: {dex_price}")
 ### 🌐 Multi-chain Support
 - Ethereum ecosystem
 - Solana ecosystem
-- Neo blockchain
+- Neo blockchain (classic and N3)
 - Other EVM-compatible chains
 
 ### 🔄 Easy Integration
