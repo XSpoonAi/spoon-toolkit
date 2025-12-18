@@ -20,6 +20,7 @@ dependencies = [
     # Core dependencies for spoon-toolkits functionality
     "requests>=2.32.3",
     "aiohttp>=3.13.2",
+    "pycares>=4.9,<5.0",
     "fastmcp>=2.12.0",
     "pandas>=2.2.0",
     "httpx>=0.28.1",
