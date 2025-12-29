@@ -35,6 +35,18 @@ from .service import (
 # Keypair utilities
 from .keypairUtils import get_wallet_keypair, get_wallet_key, get_private_key, get_public_key
 
+# Signer interface (local & Turnkey)
+from .signers import (
+    SignerError,
+    SolanaSigner,
+    LocalSigner,
+    TurnkeySigner,
+    SignerManager,
+    get_default_signer,
+    set_default_signer,
+    has_signer_credentials,
+)
+
 # Plugin integration
 from .index import solana_plugin, PluginManifest, ProviderDefinition, wallet_provider, init_plugin
 
@@ -86,6 +98,15 @@ __all__ = [
     "get_wallet_key",
     "get_private_key",
     "get_public_key",
+    # Signer interface
+    "SignerError",
+    "SolanaSigner",
+    "LocalSigner",
+    "TurnkeySigner",
+    "SignerManager",
+    "get_default_signer",
+    "set_default_signer",
+    "has_signer_credentials",
     # Plugin integration
     "solana_plugin",
     "PluginManifest",
