@@ -437,14 +437,33 @@ class ElevenLabsVoiceDesignTool(ElevenLabsToolBase):
                 **({"auto_generate_text": auto_generate_text} if not text else {}),
             )
 
-            # Extract previews
+            # Extract previews (SDK renamed voice_previews -> previews)
             previews = []
-            if hasattr(response, "voice_previews"):
-                for preview in response.voice_previews:
-                    previews.append({
-                        "generated_voice_id": preview.generated_voice_id,
-                        "preview_audio_base64": preview.preview_base64 if hasattr(preview, "preview_base64") else None
-                    })
+            raw_previews = []
+            if hasattr(response, "previews"):
+                raw_previews = response.previews or []
+            elif hasattr(response, "voice_previews"):
+                raw_previews = response.voice_previews or []
+            elif isinstance(response, dict):
+                raw_previews = response.get("previews") or response.get("voice_previews") or []
+
+            for preview in raw_previews:
+                generated_voice_id = getattr(preview, "generated_voice_id", None)
+                if generated_voice_id is None and isinstance(preview, dict):
+                    generated_voice_id = preview.get("generated_voice_id")
+
+                # Different SDK versions expose the audio as preview_base64 or audio_base64
+                preview_audio = (
+                    getattr(preview, "preview_base64", None)
+                    or getattr(preview, "audio_base64", None)
+                    or (preview.get("preview_base64") if isinstance(preview, dict) else None)
+                    or (preview.get("audio_base64") if isinstance(preview, dict) else None)
+                )
+
+                previews.append({
+                    "generated_voice_id": generated_voice_id,
+                    "preview_audio_base64": preview_audio
+                })
 
             result = {
                 "success": True,
@@ -843,4 +862,3 @@ __all__ = [
     "ElevenLabsDubbingStatusTool",
     "ElevenLabsDubbingAudioTool",
 ]
-
