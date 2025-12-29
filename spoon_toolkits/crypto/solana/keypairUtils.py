@@ -17,6 +17,80 @@ PRIVATE_KEY_KEYS = ("SOLANA_PRIVATE_KEY", "WALLET_PRIVATE_KEY")
 PUBLIC_KEY_KEYS = ("SOLANA_PUBLIC_KEY", "WALLET_PUBLIC_KEY")
 
 
+def _is_encrypted(value: str) -> bool:
+    """Check if a value is an encrypted secret (ENC: prefix)."""
+    return value.startswith("ENC:")
+
+
+def _get_from_vault(key: str) -> Optional[str]:
+    """Try to retrieve a decrypted secret from SecretVault."""
+    try:
+        from spoon_ai.wallet.vault import get_vault
+        vault = get_vault()
+        if vault.exists(key):
+            raw = vault.get_raw(key)
+            if raw:
+                return raw.decode("utf-8")
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.debug("Failed to get %s from vault: %s", key, e)
+    return None
+
+
+def _auto_decrypt_to_vault(env_key: str) -> bool:
+    """
+    Auto-decrypt an encrypted env var and store in vault.
+
+    Returns True if decryption succeeded, False otherwise.
+    """
+    enc_value = os.getenv(env_key)
+    if not enc_value or not _is_encrypted(enc_value):
+        return False
+
+    try:
+        from spoon_ai.wallet.vault import get_vault
+        from spoon_ai.wallet.security import decrypt_and_store
+
+        vault = get_vault()
+
+        # Already decrypted?
+        if vault.exists(env_key):
+            return True
+
+        # Get master password
+        password = os.getenv("SPOON_MASTER_PWD")
+        if not password:
+            import sys
+            import getpass
+            try:
+                if sys.stdin.isatty():
+                    password = getpass.getpass(
+                        f"Enter password to decrypt {env_key}: "
+                    )
+            except Exception:
+                pass
+
+        if not password:
+            logger.warning(
+                f"Encrypted {env_key} found but no password available. "
+                f"Set SPOON_MASTER_PWD or run interactively."
+            )
+            return False
+
+        # Decrypt and store
+        decrypt_and_store(enc_value, password, env_key, vault=vault)
+        logger.info(f"Decrypted {env_key} and stored in vault.")
+        return True
+
+    except ImportError as e:
+        logger.warning(f"Cannot decrypt {env_key}: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Failed to decrypt {env_key}: {e}")
+        return False
+
+
 def _runtime_get(runtime: Any, key: str) -> Optional[str]:
     """Attempt to retrieve a configuration value from an agent runtime."""
     if runtime is None:
@@ -93,8 +167,38 @@ def _decode_private_key(private_key: str) -> Keypair:
 
 
 def get_private_key(runtime: Any = None) -> Optional[str]:
-    """Return the configured Solana private key string, if available."""
-    return _read_setting(runtime, PRIVATE_KEY_KEYS)
+    """
+    Return the configured Solana private key string, if available.
+
+    Priority order:
+    1. Plain private key from env (not encrypted)
+    2. Decrypted key from SecretVault (auto-decrypt ENC:v2 if needed)
+    """
+    for key in PRIVATE_KEY_KEYS:
+        # Check runtime first
+        if runtime:
+            value = _runtime_get(runtime, key)
+            if value and not _is_encrypted(value):
+                return value
+
+        # Check plain env
+        env_value = os.getenv(key)
+        if env_value and not _is_encrypted(env_value):
+            return env_value
+
+        # Check vault (already decrypted)
+        vault_value = _get_from_vault(key)
+        if vault_value:
+            return vault_value
+
+        # Try auto-decrypt if encrypted in env
+        if env_value and _is_encrypted(env_value):
+            if _auto_decrypt_to_vault(key):
+                vault_value = _get_from_vault(key)
+                if vault_value:
+                    return vault_value
+
+    return None
 
 
 def get_public_key(runtime: Any = None) -> Optional[str]:
