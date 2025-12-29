@@ -1,7 +1,6 @@
 """GitHub data provider for Neo blockchain analysis"""
 
 import os
-from datetime import datetime, timezone
 from typing import Dict, Any, List
 from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
@@ -22,11 +21,12 @@ class GitHubProvider:
         self.client = Client(transport=transport, fetch_schema_from_transport=True)
     
     async def fetch_issues(self, owner: str, repo: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
-        """Fetch issues data from GitHub."""
+        """Fetch issues data from GitHub"""
         query = gql("""
-        query($owner: String!, $repo: String!) {
+        query($owner: String!, $repo: String!, $start_date: DateTime!, $end_date: DateTime!) {
             repository(owner: $owner, name: $repo) {
-                issues(first: 100, orderBy: {field: CREATED_AT, direction: DESC}) {
+                issues(first: 100, orderBy: {field: CREATED_AT, direction: DESC}, 
+                       filterBy: {createdAt: {start: $start_date, end: $end_date}}) {
                     nodes {
                         id
                         title
@@ -35,54 +35,43 @@ class GitHubProvider:
                         createdAt
                         updatedAt
                         closedAt
-                        author { login }
-                        labels(first: 10) { nodes { name } }
-                        comments { totalCount }
+                        author {
+                            login
+                        }
+                        labels(first: 10) {
+                            nodes {
+                                name
+                            }
+                        }
+                        comments {
+                            totalCount
+                        }
                     }
                 }
             }
         }
-        """
-        )
+        """)
         
         variables = {
             "owner": owner,
             "repo": repo,
+            "start_date": start_date,
+            "end_date": end_date
         }
         
         try:
             result = self.client.execute(query, variable_values=variables)
-            issues = result.get("repository", {}).get("issues", {}).get("nodes", []) or []
-
-            # Client-side filter by createdAt range
-            start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00")).astimezone(timezone.utc)
-            end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00")).astimezone(timezone.utc)
-
-            filtered = []
-            for issue in issues:
-                created = issue.get("createdAt")
-                if not created:
-                    continue
-                try:
-                    created_dt = datetime.fromisoformat(created.replace("Z", "+00:00")).astimezone(timezone.utc)
-                except Exception:
-                    continue
-                if start_dt <= created_dt <= end_dt:
-                    filtered.append(issue)
-
-            return filtered
+            return result.get("repository", {}).get("issues", {}).get("nodes", [])
         except Exception as e:
             raise Exception(f"Failed to fetch issues: {str(e)}")
     
     async def fetch_pull_requests(self, owner: str, repo: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
-        """Fetch pull requests data from GitHub.
-
-        Note: pullRequests filterBy does not support createdAt; fetch recent and filter client-side.
-        """
+        """Fetch pull requests data from GitHub"""
         query = gql("""
-        query($owner: String!, $repo: String!) {
+        query($owner: String!, $repo: String!, $start_date: DateTime!, $end_date: DateTime!) {
             repository(owner: $owner, name: $repo) {
-                pullRequests(first: 100, orderBy: {field: CREATED_AT, direction: DESC}) {
+                pullRequests(first: 100, orderBy: {field: CREATED_AT, direction: DESC}, 
+                           filterBy: {createdAt: {start: $start_date, end: $end_date}}) {
                     nodes {
                         id
                         title
@@ -92,11 +81,23 @@ class GitHubProvider:
                         updatedAt
                         closedAt
                         mergedAt
-                        author { login }
-                        labels(first: 10) { nodes { name } }
-                        comments { totalCount }
-                        reviews { totalCount }
-                        commits { totalCount }
+                        author {
+                            login
+                        }
+                        labels(first: 10) {
+                            nodes {
+                                name
+                            }
+                        }
+                        comments {
+                            totalCount
+                        }
+                        reviews {
+                            totalCount
+                        }
+                        commits {
+                            totalCount
+                        }
                     }
                 }
             }
@@ -105,46 +106,34 @@ class GitHubProvider:
         
         variables = {
             "owner": owner,
-            "repo": repo
+            "repo": repo,
+            "start_date": start_date,
+            "end_date": end_date
         }
         
         try:
             result = self.client.execute(query, variable_values=variables)
-            prs = result.get("repository", {}).get("pullRequests", {}).get("nodes", []) or []
-
-            start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00")).astimezone(timezone.utc)
-            end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00")).astimezone(timezone.utc)
-
-            filtered = []
-            for pr in prs:
-                created = pr.get("createdAt")
-                if not created:
-                    continue
-                try:
-                    created_dt = datetime.fromisoformat(created.replace("Z", "+00:00")).astimezone(timezone.utc)
-                except Exception:
-                    continue
-                if start_dt <= created_dt <= end_dt:
-                    filtered.append(pr)
-
-            return filtered
+            return result.get("repository", {}).get("pullRequests", {}).get("nodes", [])
         except Exception as e:
             raise Exception(f"Failed to fetch pull requests: {str(e)}")
     
     async def fetch_commits(self, owner: str, repo: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
-        """Fetch commits data from GitHub."""
+        """Fetch commits data from GitHub"""
         query = gql("""
-        query($owner: String!, $repo: String!, $start_ts: GitTimestamp!, $end_ts: GitTimestamp!) {
+        query($owner: String!, $repo: String!, $start_date: DateTime!, $end_date: DateTime!) {
             repository(owner: $owner, name: $repo) {
                 defaultBranchRef {
                     target {
                         ... on Commit {
-                            history(since: $start_ts, until: $end_ts, first: 100) {
+                            history(since: $start_date, until: $end_date, first: 100) {
                                 nodes {
                                     id
                                     message
                                     committedDate
-                                    author { name email }
+                                    author {
+                                        name
+                                        email
+                                    }
                                     additions
                                     deletions
                                     changedFiles
@@ -157,16 +146,11 @@ class GitHubProvider:
         }
         """)
         
-        def to_ts(date_str: str) -> str:
-            if "T" in date_str:
-                return date_str
-            return f"{date_str}T00:00:00Z"
-        
         variables = {
             "owner": owner,
             "repo": repo,
-            "start_ts": to_ts(start_date),
-            "end_ts": to_ts(end_date)
+            "start_date": start_date,
+            "end_date": end_date
         }
         
         try:
@@ -191,9 +175,7 @@ class GitHubProvider:
                 }
                 stargazerCount
                 forkCount
-                watchers {
-                    totalCount
-                }
+                watcherCount
                 openIssues: issues(states: OPEN) {
                     totalCount
                 }
@@ -202,6 +184,13 @@ class GitHubProvider:
                 }
                 licenseInfo {
                     name
+                }
+                topics(first: 10) {
+                    nodes {
+                        topic {
+                            name
+                        }
+                    }
                 }
             }
         }
