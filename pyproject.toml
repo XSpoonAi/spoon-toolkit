@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spoon-toolkits"
-version = "0.2.3"
+version = "0.2.5"
 authors = [
   { name="SpoonAI Team", email="team@spoonai.com" },
 ]
