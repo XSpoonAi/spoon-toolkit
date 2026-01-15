@@ -233,19 +233,28 @@ class TurnkeySigner(EvmSigner):
             from web3 import Web3
             import rlp
             
-            w3 = Web3(HTTPProvider(rpc_url)) if rpc_url else Web3()
+            w3 = Web3(HTTPProvider(rpc_url)) if rpc_url else None
             
             # Helper function to convert int to bytes
             def int_to_bytes(value: int) -> bytes:
                 if value == 0:
-                    return b""
+                    return b"\x00"
                 return value.to_bytes((value.bit_length() + 7) // 8, byteorder="big")
             
             # Determine transaction type and build unsigned transaction
             # Check if it's EIP-1559 (has maxFeePerGas) or legacy (has gasPrice)
             if "maxFeePerGas" in tx_dict or "maxPriorityFeePerGas" in tx_dict:
                 # EIP-1559 transaction (type 2)
-                chain_id = tx_dict.get("chainId", w3.eth.chain_id if rpc_url else 1)
+                chain_id = tx_dict.get("chainId")
+                if chain_id is None:
+                    if w3 and rpc_url:
+                        try:
+                            chain_id = w3.eth.chain_id
+                        except Exception:
+                            chain_id = 1
+                    else:
+                        chain_id = 1
+                
                 nonce = tx_dict.get("nonce", 0)
                 max_priority_fee_per_gas = tx_dict.get("maxPriorityFeePerGas", 0)
                 max_fee_per_gas = tx_dict.get("maxFeePerGas", 0)
@@ -279,7 +288,16 @@ class TurnkeySigner(EvmSigner):
             else:
                 # Legacy transaction (type 0) - convert to EIP-1559 format for Turnkey
                 # Turnkey prefers EIP-1559 format, so we'll convert legacy tx to EIP-1559
-                chain_id = tx_dict.get("chainId", w3.eth.chain_id if rpc_url else 1)
+                chain_id = tx_dict.get("chainId")
+                if chain_id is None:
+                    if w3 and rpc_url:
+                        try:
+                            chain_id = w3.eth.chain_id
+                        except Exception:
+                            chain_id = 1
+                    else:
+                        chain_id = 1
+                
                 nonce = tx_dict.get("nonce", 0)
                 gas_price = tx_dict.get("gasPrice", 0)
                 gas_limit = tx_dict.get("gas", tx_dict.get("gasLimit", 21000))

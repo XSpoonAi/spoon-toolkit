@@ -203,7 +203,7 @@ class LocalSigner(NeoSigner):
             return
 
         try:
-            from neo3.wallet import Account
+            from neo3.wallet.account import Account
             from neo3.core import types
 
             # Try WIF format first, then hex
@@ -230,7 +230,7 @@ class LocalSigner(NeoSigner):
 
         except ImportError:
             raise SignerError(
-                "neo3 library not installed. Install with: pip install neo3"
+                "neo-mamba library not installed. Install with: pip install neo-mamba"
             )
         except Exception as e:
             raise SignerError(f"Failed to initialize Neo account: {e}")
@@ -473,14 +473,14 @@ class TurnkeySigner(NeoSigner):
 
         try:
             from neo3.core import types
-            from neo3.wallet import Account
+            from neo3.wallet.account import Account
 
             # Convert Neo address to script hash
             script_hash = Account.address_to_script_hash(address)
             self._cached_script_hash = f"0x{script_hash}"
             return self._cached_script_hash
         except ImportError:
-            raise SignerError("neo3 library required for address conversion")
+            raise SignerError("neo-mamba library required for address conversion. Install with: pip install neo-mamba")
         except Exception as e:
             raise SignerError(f"Failed to convert address to script hash: {e}")
 
