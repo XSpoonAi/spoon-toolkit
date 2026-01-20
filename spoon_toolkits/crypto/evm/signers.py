@@ -152,7 +152,7 @@ def _get_private_key_from_vault() -> Optional[str]:
     if env_value:
         if _is_encrypted(env_value):
             logger.info(f"Found encrypted {ENV_PRIVATE_KEY} in environment, attempting decryption...")
-        if _auto_decrypt_to_vault(ENV_PRIVATE_KEY):
+            if _auto_decrypt_to_vault(ENV_PRIVATE_KEY):
                 value = _get_from_vault(ENV_PRIVATE_KEY)
                 if value:
                     logger.info(f"Successfully decrypted {ENV_PRIVATE_KEY} and retrieved from vault")
@@ -160,7 +160,7 @@ def _get_private_key_from_vault() -> Optional[str]:
             
             # CRITICAL: If it's encrypted but decryption failed, we must NOT return None
             # because that would cause the client to fallback to the encrypted string.
-                raise SignerError(
+            raise SignerError(
                 f"Failed to decrypt {ENV_PRIVATE_KEY}. "
                 "The password in SPOON_MASTER_PWD is likely incorrect or missing."
             )
