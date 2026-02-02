@@ -690,6 +690,11 @@ class AutoDriveProvider:
             self._log_request("GET", full_url, None, None, None)
             raise AutoDriveAPIError(f"Stream download failed: {str(e)}")
 
+    # Alias for backward compatibility
+    async def stream_download(self, cid: str) -> bytes:
+        """Alias for download_object_stream for backward compatibility"""
+        return await self.download_object_stream(cid)
+
     async def download_public_object(self, object_id: str) -> bytes:
         """
         GET /api/objects/{id}/public - Download a public object by id (direct download, loads entire file into memory).
@@ -869,19 +874,21 @@ class AutoDriveProvider:
 
     async def get_async_download_status(self, download_id: str) -> Dict[str, Any]:
         """
-        GET /api/downloads/async/{download_id}/status - Get async download status
+        GET /api/downloads/async/{download_id} - Get async download status
         
         Note: This endpoint uses https://public.auto-drive.autonomys.xyz as base URL.
+        The download_id must be the UUID returned from create_async_download, NOT the CID.
         
         Args:
-            download_id: The download task ID
+            download_id: The download task UUID (NOT the CID)
         
         Returns:
-            Download status including fileSize, downloaded, createdAt, updatedAt
+            Download status including fileSize, downloadedBytes, status, createdAt, updatedAt
         """
         # Async download endpoint uses different base URL (public domain)
         download_base_url = "https://public.auto-drive.autonomys.xyz"
-        endpoint = f"/api/downloads/async/{download_id}/status"
+        # NOTE: The correct endpoint is /api/downloads/async/{download_id} without /status suffix
+        endpoint = f"/api/downloads/async/{download_id}"
         full_url = f"{download_base_url}{endpoint}"
         
         download_headers = {
