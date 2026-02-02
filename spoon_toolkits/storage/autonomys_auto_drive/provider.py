@@ -185,11 +185,14 @@ class AutoDriveProvider:
         upload_opts = upload_options or self._get_default_upload_options()
         
         # Step 1: POST /api/uploads/file - Create upload session
+        # This endpoint accepts Content-Type: application/json and Accept: application/json
         init_data = {
             "filename": filename,
             "mimeType": mime_type,
             "uploadOptions": upload_opts
         }
+        # httpx automatically sets Content-Type: application/json when using json= parameter
+        # Accept: application/json is already in default headers
         init_res = await self._make_request("POST", "/api/uploads/file", json=init_data)
         upload_id = init_res.get('id') or init_res.get('uploadId')
         
@@ -197,8 +200,10 @@ class AutoDriveProvider:
             raise AutoDriveAPIError(f"Failed to get upload_id for file: {init_res}", response_body=init_res)
 
         # Step 2: POST /api/uploads/file/{upload_id}/chunk - Upload file content
+        # This endpoint accepts Content-Type: multipart/form-data
         files = {'file': (filename, content, mime_type)}
         data = {'index': '0'}
+        # httpx automatically sets Content-Type: multipart/form-data when using files= parameter
         await self._make_request("POST", f"/api/uploads/file/{upload_id}/chunk", files=files, data=data)
 
         # Step 3: POST /api/uploads/{upload_id}/complete - Complete upload
@@ -212,7 +217,8 @@ class AutoDriveProvider:
         chunk_size: int = 5 * 1024 * 1024,  # 5MB default
         concurrency: int = 1,  # API requires sequential upload, so concurrency must be 1
         retry: int = 3,
-        resume: bool = True
+        resume: bool = True,
+        mime_type: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Upload a large file with chunking, concurrency, retry, and resume support.
@@ -220,9 +226,10 @@ class AutoDriveProvider:
         Args:
             file_path: Path to the file to upload
             chunk_size: Size of each chunk in bytes (default: 5MB)
-            concurrency: Number of concurrent chunk uploads (default: 3)
+            concurrency: Number of concurrent chunk uploads (default: 1)
             retry: Number of retry attempts for failed chunks (default: 3)
             resume: Whether to resume interrupted uploads (default: True)
+            mime_type: MIME type of the file (optional, will be auto-detected from extension if not provided)
         
         Returns:
             Upload result with CID and metadata
@@ -234,13 +241,14 @@ class AutoDriveProvider:
         file_size = os.path.getsize(file_path)
         _, suffix = os.path.splitext(file_path)
         
-        # Get MIME type
-        try:
-            from spoon_toolkits.storage.autonomys_auto_drive.mime_type import suffix_to_mime_type_dict
-            mime_type = suffix_to_mime_type_dict.get(suffix, 'application/octet-stream')
-        except (ImportError, AttributeError):
-            # Fallback if mime_type module not available
-            mime_type = 'application/octet-stream'
+        # Get MIME type - use provided mime_type or auto-detect
+        if mime_type is None:
+            try:
+                from spoon_toolkits.storage.autonomys_auto_drive.mime_type import suffix_to_mime_type_dict
+                mime_type = suffix_to_mime_type_dict.get(suffix, 'application/octet-stream')
+            except (ImportError, AttributeError):
+                # Fallback if mime_type module not available
+                mime_type = 'application/octet-stream'
         
         upload_id = None
         uploaded_parts = set()
@@ -260,6 +268,9 @@ class AutoDriveProvider:
         
         # Use /api/uploads/file endpoint for all files (both small and large)
         # Large files are handled by uploading multiple chunks
+        # This endpoint accepts Content-Type: application/json and Accept: application/json
+        # httpx automatically sets Content-Type: application/json when using json= parameter
+        # Accept: application/json is already in default headers
         init_res = await self._make_request("POST", "/api/uploads/file", json=init_data)
         upload_id = init_res.get('id') or init_res.get('uploadId')
         
@@ -269,6 +280,7 @@ class AutoDriveProvider:
         print(f"\n[UPLOAD] Starting upload: {filename} ({file_size} bytes)")
         print(f"[UPLOAD] Upload ID: {upload_id}")
         print(f"[UPLOAD] Chunk size: {chunk_size} bytes")
+        print(f"[UPLOAD] MIME type: {mime_type}")
         if concurrency > 1:
             print(f"[UPLOAD] Warning: API requires sequential upload, concurrency={concurrency} will be ignored")
         
@@ -281,10 +293,13 @@ class AutoDriveProvider:
             """Upload a single chunk with retry"""
             for attempt in range(retry):
                 try:
-                    files = {'file': ('blob', chunk_data, "application/octet-stream")}
+                    # Use the detected/provided mime_type instead of hardcoded "application/octet-stream"
+                    files = {'file': ('blob', chunk_data, mime_type)}
                     data = {'index': str(part_index)}
                     
                     # Use /chunk endpoint
+                    # This endpoint accepts Content-Type: multipart/form-data
+                    # httpx automatically sets Content-Type: multipart/form-data when using files= parameter
                     await self._make_request("POST", f"/api/uploads/file/{upload_id}/chunk", files=files, data=data)
                     
                     progress = (part_index + 1) / total_chunks * 100
