@@ -203,7 +203,7 @@ class LocalSigner(NeoSigner):
             return
 
         try:
-            from neo3.wallet import Account
+            from neo3.wallet.account import Account
             from neo3.core import types
 
             # Try WIF format first, then hex
@@ -217,14 +217,20 @@ class LocalSigner(NeoSigner):
                     key_hex = self._private_key
 
                 # Convert hex to bytes and create account
-                key_bytes = bytes.fromhex(key_hex)
+                try:
+                    key_bytes = bytes.fromhex(key_hex)
+                except ValueError as e:
+                    raise SignerError(
+                        f"Invalid hex private key format: {e}. "
+                        f"Expected a valid hexadecimal string (WIF or hex format)."
+                    )
                 self._account = Account.from_private_key(key_bytes)
 
             self._initialized = True
 
         except ImportError:
             raise SignerError(
-                "neo3 library not installed. Install with: pip install neo3"
+                "neo-mamba library not installed. Install with: pip install neo-mamba"
             )
         except Exception as e:
             raise SignerError(f"Failed to initialize Neo account: {e}")
@@ -388,11 +394,24 @@ class TurnkeySigner(NeoSigner):
         # Check for direct signature
         signature_hex = result.get("signature") or result.get("signatureHex")
         if signature_hex:
-            return bytes.fromhex(signature_hex.replace("0x", ""))
+            if not isinstance(signature_hex, str):
+                raise SignerError(
+                    f"Invalid signature type: expected str, got {type(signature_hex).__name__}"
+                )
+            try:
+                return bytes.fromhex(signature_hex.replace("0x", ""))
+            except ValueError as e:
+                raise SignerError(f"Invalid signature hex format: {e}")
 
         # Reconstruct from r and s
         r_hex = result.get("r", "")
         s_hex = result.get("s", "")
+
+        # Type check for r and s
+        if not isinstance(r_hex, str) or not isinstance(s_hex, str):
+            raise SignerError(
+                f"Invalid r or s type: expected str, got r={type(r_hex).__name__}, s={type(s_hex).__name__}"
+            )
 
         if not r_hex or not s_hex:
             raise SignerError("Turnkey signature missing r or s components")
@@ -401,8 +420,11 @@ class TurnkeySigner(NeoSigner):
         s_hex = s_hex.replace("0x", "")
 
         # Pad to 32 bytes each for P-256 curve
-        r_bytes = bytes.fromhex(r_hex.zfill(64))
-        s_bytes = bytes.fromhex(s_hex.zfill(64))
+        try:
+            r_bytes = bytes.fromhex(r_hex.zfill(64))
+            s_bytes = bytes.fromhex(s_hex.zfill(64))
+        except ValueError as e:
+            raise SignerError(f"Invalid r or s hex format: {e}")
 
         return r_bytes + s_bytes
 
@@ -451,14 +473,14 @@ class TurnkeySigner(NeoSigner):
 
         try:
             from neo3.core import types
-            from neo3.wallet import Account
+            from neo3.wallet.account import Account
 
             # Convert Neo address to script hash
             script_hash = Account.address_to_script_hash(address)
             self._cached_script_hash = f"0x{script_hash}"
             return self._cached_script_hash
         except ImportError:
-            raise SignerError("neo3 library required for address conversion")
+            raise SignerError("neo-mamba library required for address conversion. Install with: pip install neo-mamba")
         except Exception as e:
             raise SignerError(f"Failed to convert address to script hash: {e}")
 
@@ -502,7 +524,7 @@ class SignerManager:
             elif turnkey_sign_with:
                 signer_type = "turnkey"
             else:
-                # Priority: plain env -> vault -> turnkey
+                # Priority: plain env -> vault -> auto-decrypt -> turnkey
                 env_key = os.getenv(ENV_PRIVATE_KEY)
 
                 # 1. Plain private key from env (not encrypted)
@@ -512,6 +534,11 @@ class SignerManager:
                 # 2. Encrypted private key from SecretVault
                 elif _get_from_vault(ENV_PRIVATE_KEY):
                     signer_type = "local"
+
+                # 2b. Try auto-decrypt if encrypted in env
+                elif env_key and _is_encrypted(env_key):
+                    if _auto_decrypt_to_vault(ENV_PRIVATE_KEY):
+                        signer_type = "local"
 
                 # 3. Turnkey remote signing
                 elif os.getenv(ENV_TURNKEY_SIGN_WITH):
@@ -526,14 +553,15 @@ class SignerManager:
                     )
 
         if signer_type == "local":
-            # Try sources in priority order: param -> plain env -> vault
+            # Try sources in priority order: param -> plain env -> vault (with auto-decrypt)
             key = private_key
             if not key:
                 env_key = os.getenv(ENV_PRIVATE_KEY)
                 if env_key and not _is_encrypted(env_key):
                     key = env_key
             if not key:
-                key = _get_from_vault(ENV_PRIVATE_KEY)
+                # Use _get_private_key_from_vault which handles auto-decryption
+                key = _get_private_key_from_vault()
 
             if not key:
                 raise ValueError(
