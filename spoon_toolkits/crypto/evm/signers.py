@@ -505,7 +505,7 @@ class SignerManager:
                         )
                 else:
                     logger.debug("Using plaintext private_key parameter")
-            key = private_key
+                    key = private_key
             
             # 2. Check environment variable
             if not key:
@@ -516,7 +516,7 @@ class SignerManager:
                         key = _get_private_key_from_vault()
                     else:
                         logger.debug(f"Using plaintext {ENV_PRIVATE_KEY} from environment")
-                    key = env_key
+                        key = env_key
             
             # 3. Check vault (for already decrypted keys or fallback)
             if not key:
