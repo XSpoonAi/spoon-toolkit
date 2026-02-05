@@ -448,7 +448,23 @@ class SignerManager:
         if signer_type == "auto":
             # Check explicit parameters first
             if private_key:
-                signer_type = "local"
+                # If encrypted, check if we can decrypt before committing to local
+                if _is_encrypted(private_key):
+                    password = os.getenv("SPOON_MASTER_PWD")
+                    if password:
+                        signer_type = "local"
+                    elif turnkey_sign_with or os.getenv(ENV_TURNKEY_SIGN_WITH):
+                        # Can't decrypt, but Turnkey is available - use Turnkey
+                        logger.warning(
+                            "Encrypted private_key provided but SPOON_MASTER_PWD not set. "
+                            "Falling back to Turnkey signing."
+                        )
+                        signer_type = "turnkey"
+                    else:
+                        # No Turnkey fallback, will fail later with helpful error
+                        signer_type = "local"
+                else:
+                    signer_type = "local"
             elif turnkey_sign_with:
                 signer_type = "turnkey"
             else:
