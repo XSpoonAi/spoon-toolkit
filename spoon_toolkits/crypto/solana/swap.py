@@ -13,7 +13,7 @@ from .service import (
     parse_transaction_error,
     validate_solana_address,
 )
-from .keypairUtils import get_wallet_key
+from .signers import SignerManager, SolanaSigner
 from .constants import (
     JUPITER_QUOTE_ENDPOINT,
     JUPITER_SWAP_ENDPOINT,
@@ -28,9 +28,13 @@ from solana.rpc.async_api import AsyncClient
 logger = logging.getLogger(__name__)
 
 class SolanaSwapTool(BaseTool):
+    """Swap tokens on Solana using Jupiter aggregator.
+
+    Supports both local private key and Turnkey secure signing.
+    """
 
     name: str = "solana_swap"
-    description: str = "Swap tokens on Solana using Jupiter aggregator"
+    description: str = "Swap tokens on Solana using Jupiter aggregator. Supports local and Turnkey secure signing."
     parameters: dict = {
         "type": "object",
         "properties": {
@@ -38,9 +42,19 @@ class SolanaSwapTool(BaseTool):
                 "type": "string",
                 "description": "Solana RPC endpoint URL. Defaults to SOLANA_RPC_URL env var."
             },
+            "signer_type": {
+                "type": "string",
+                "enum": ["local", "turnkey", "auto"],
+                "description": "Signing method: 'local' (private key), 'turnkey' (secure API), or 'auto' (detect from env)",
+                "default": "auto",
+            },
             "private_key": {
                 "type": "string",
-                "description": "Wallet private key. Defaults to SOLANA_PRIVATE_KEY env var."
+                "description": "Wallet private key. Required for local signing. Defaults to SOLANA_PRIVATE_KEY env var."
+            },
+            "turnkey_sign_with": {
+                "type": "string",
+                "description": "Turnkey signing identity (Solana address). Required for Turnkey signing. Defaults to TURNKEY_SOLANA_ADDRESS env var.",
             },
             "input_token": {
                 "type": "string",
@@ -69,7 +83,9 @@ class SolanaSwapTool(BaseTool):
     }
 
     rpc_url: Optional[str] = Field(default=None)
+    signer_type: str = Field(default="auto")
     private_key: Optional[str] = Field(default=None)
+    turnkey_sign_with: Optional[str] = Field(default=None)
     input_token: Optional[str] = Field(default=None)
     output_token: Optional[str] = Field(default=None)
     amount: Optional[Union[str, float]] = Field(default=None)
@@ -79,7 +95,9 @@ class SolanaSwapTool(BaseTool):
     async def execute(
         self,
         rpc_url: Optional[str] = None,
+        signer_type: Optional[str] = None,
         private_key: Optional[str] = None,
+        turnkey_sign_with: Optional[str] = None,
         input_token: Optional[str] = None,
         output_token: Optional[str] = None,
         amount: Optional[Union[str, float]] = None,
@@ -91,16 +109,18 @@ class SolanaSwapTool(BaseTool):
         try:
             # Resolve parameters
             rpc_url = rpc_url or self.rpc_url or get_rpc_url()
+            signer_type = signer_type or self.signer_type
             private_key = private_key or self.private_key
+            turnkey_sign_with = turnkey_sign_with or self.turnkey_sign_with
             input_token = input_token or self.input_token
             output_token = output_token or self.output_token
             amount = amount or self.amount
             slippage_bps = slippage_bps if slippage_bps is not None else self.slippage_bps
             priority_level = priority_level or self.priority_level
-            
+
             # Log received parameters for debugging
             logger.debug(f"SolanaSwapTool.execute called with: input_token={input_token}, output_token={output_token}, amount={amount}")
-            
+
             # Validate required parameters early
             if not input_token:
                 return ToolResult(error="input_token parameter is required. Please provide 'SOL' for native SOL or a token mint address.")
@@ -109,12 +129,17 @@ class SolanaSwapTool(BaseTool):
             if amount is None:
                 return ToolResult(error="amount parameter is required.")
 
-            # Get wallet keypair with dynamic private key support
-            keypair_result = get_wallet_key(require_private_key=True, private_key=private_key)
-            if not keypair_result.keypair:
-                return ToolResult(error="Failed to get wallet keypair")
-            wallet_keypair = keypair_result.keypair
-            wallet_pubkey = str(wallet_keypair.pubkey())
+            # Create signer using SignerManager (supports local and Turnkey)
+            try:
+                signer = SignerManager.create_signer(
+                    signer_type=signer_type,
+                    private_key=private_key,
+                    turnkey_sign_with=turnkey_sign_with,
+                )
+            except Exception as e:
+                return ToolResult(error=f"Failed to create signer: {str(e)}")
+
+            wallet_pubkey = signer.get_address()
 
             portfolio = await self._load_wallet_portfolio(runtime, rpc_url, wallet_pubkey)
 
@@ -173,7 +198,7 @@ class SolanaSwapTool(BaseTool):
 
             # Execute swap
             execute_result = await self._execute_swap_transaction(
-                rpc_url, wallet_keypair, swap_result["swap_transaction"]
+                rpc_url, signer, swap_result["swap_transaction"]
             )
 
             if not execute_result["success"]:
@@ -194,7 +219,8 @@ class SolanaSwapTool(BaseTool):
                 "price_impact": float(quote.get("priceImpactPct", 0)),
                 "slippage_bps": quote_context["slippage_bps"],
                 "route_plan": quote.get("routePlan", []),
-                "fees": execute_result.get("fees", {})
+                "fees": execute_result.get("fees", {}),
+                "signer_type": signer.signer_type,
             })
 
         except Exception as e:
@@ -451,17 +477,34 @@ class SolanaSwapTool(BaseTool):
     async def _execute_swap_transaction(
         self,
         rpc_url: str,
-        wallet_keypair,
+        signer: SolanaSigner,
         swap_transaction_base64: str
     ) -> Dict[str, Any]:
         """Execute the swap transaction."""
         try:
             from solders.transaction import VersionedTransaction
+            from solders.signature import Signature
             import base64
 
             transaction_bytes = base64.b64decode(swap_transaction_base64)
             transaction = VersionedTransaction.from_bytes(transaction_bytes)
-            transaction.sign([wallet_keypair])
+
+            # Sign the transaction using the signer
+            # For Turnkey, we need to sign the message and reconstruct the transaction
+            if signer.signer_type == "turnkey":
+                # Get the message bytes for signing
+                message_bytes = bytes(transaction.message)
+                # Sign using Turnkey
+                signature_bytes = signer.sign_transaction(message_bytes)
+                signature = Signature.from_bytes(signature_bytes)
+                # Reconstruct transaction with new signature
+                # The transaction already has a placeholder signature, replace it
+                signatures = list(transaction.signatures)
+                signatures[0] = signature
+                transaction = VersionedTransaction.populate(transaction.message, signatures)
+            else:
+                # Local signer - use the keypair directly
+                transaction.sign([signer.keypair])
 
             return await self._submit_signed_transaction(rpc_url, transaction)
 
