@@ -1,5 +1,9 @@
 """Neo blockchain tools module"""
 
+# Apply neo-mamba compatibility fixes before importing any tools
+from . import _compat as _neo_compat
+_neo_compat.apply()
+
 # Address tools
 from .address_tools import (
     GetAddressCountTool,
@@ -97,6 +101,46 @@ from .governance_tools import (
     GetCommitteeInfoTool,
 )
 
+# Transfer tools (on-chain transaction sending)
+from .transfer_tools import (
+    NeoTransferTool,
+    NeoNep11TransferTool,
+)
+
+# Contract invocation tools (on-chain + test invoke + batch + estimate)
+from .invoke_tools import (
+    NeoInvokeContractTool,
+    NeoTestInvokeTool,
+    NeoBatchInvokeTool,
+    NeoEstimateGasTool,
+)
+
+# Balance tools
+from .balance_tools import (
+    NeoGetBalanceTool,
+)
+
+# Governance action tools (claim GAS, vote)
+from .governance_action_tools import (
+    NeoClaimGasTool,
+    NeoVoteTool,
+)
+
+# Contract deployment tools
+from .deploy_tools import (
+    NeoDeployContractTool,
+)
+
+# Multi-signature tools
+from .multisig_tools import (
+    NeoMultiSigCreateTool,
+)
+
+# Contract storage tools
+from .storage_tools import (
+    NeoContractStorageTool,
+)
+
 # Provider
 from .neo_provider import NeoProvider
 from .base import get_provider
@@ -178,7 +222,33 @@ __all__ = [
 
     # Governance tools (1)
     "GetCommitteeInfoTool",
-    
+
+    # Transfer tools (2)
+    "NeoTransferTool",
+    "NeoNep11TransferTool",
+
+    # Contract invocation tools (4)
+    "NeoInvokeContractTool",
+    "NeoTestInvokeTool",
+    "NeoBatchInvokeTool",
+    "NeoEstimateGasTool",
+
+    # Balance tools (1)
+    "NeoGetBalanceTool",
+
+    # Governance action tools (2)
+    "NeoClaimGasTool",
+    "NeoVoteTool",
+
+    # Contract deployment tools (1)
+    "NeoDeployContractTool",
+
+    # Multi-signature tools (1)
+    "NeoMultiSigCreateTool",
+
+    # Contract storage tools (1)
+    "NeoContractStorageTool",
+
     # Provider
     "NeoProvider",
     "get_provider",
