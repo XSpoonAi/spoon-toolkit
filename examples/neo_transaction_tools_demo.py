@@ -438,7 +438,22 @@ async def main():
     if live_mode:
         pk = os.getenv("NEO_PRIVATE_KEY")
         print(f"  Private key: {'set' if pk else 'NOT SET (transactions will fail)'}")
+        if pk:
+            # Derive address for confirmation
+            try:
+                from neo3.wallet.account import Account
+                acct = Account.from_wif(pk)
+                print(f"  Address:    {acct.address}")
+            except Exception:
+                pass
     print("=" * 70)
+
+    # Safety confirmation for live mode
+    if live_mode and "--yes" not in sys.argv:
+        answer = input("\n  This will send REAL transactions on testnet. Continue? [y/N] ")
+        if answer.strip().lower() not in ("y", "yes"):
+            print("  Aborted.")
+            return
 
     # -----------------------------------------------------------------------
     # Part 1: Read-only tools (always run, no private key needed)

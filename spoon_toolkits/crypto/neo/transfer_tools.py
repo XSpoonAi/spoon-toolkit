@@ -5,84 +5,31 @@ on the Neo N3 blockchain. Uses neo-mamba's ChainFacade for transaction
 building, signing, fee calculation, and broadcasting.
 """
 
-import os
 import logging
 from typing import Optional
 
 from pydantic import Field
 
 from spoon_ai.tools.base import BaseTool, ToolResult
-from .signers import (
-    ENV_PRIVATE_KEY,
-    _is_encrypted,
-    _get_private_key_from_vault,
+from ._helpers import (
+    get_rpc_url,
+    resolve_private_key,
+    create_neo3_account,
+    is_halt,
+    state_label,
+    sanitize_error,
 )
 
 logger = logging.getLogger(__name__)
 
-
-# RPC URLs (same convention as neo_provider.py)
-DEFAULT_MAINNET_RPC = "https://mainmagnet.ngd.network:443"
-DEFAULT_TESTNET_RPC = "https://testmagnet.ngd.network:443"
-
 # Well-known token identifiers
 _TOKEN_ALIASES = {"NEO", "GAS"}
 
-
-def _get_rpc_url(network: str) -> str:
-    """Resolve RPC URL from network name and environment variables."""
-    if network == "mainnet":
-        return os.getenv("NEO_MAINNET_RPC", DEFAULT_MAINNET_RPC)
-    return os.getenv("NEO_TESTNET_RPC", DEFAULT_TESTNET_RPC)
-
-
-def _resolve_private_key(private_key: Optional[str] = None) -> str:
-    """Resolve private key from parameter, env var, or vault.
-
-    Priority: explicit param → plain env → vault-decrypted env.
-
-    Returns:
-        Private key string (WIF or hex).
-
-    Raises:
-        ValueError: if no private key can be resolved.
-    """
-    if private_key:
-        return private_key.strip()
-
-    env_key = os.getenv(ENV_PRIVATE_KEY)
-    if env_key and not _is_encrypted(env_key):
-        return env_key.strip()
-
-    vault_key = _get_private_key_from_vault()
-    if vault_key:
-        return vault_key.strip()
-
-    raise ValueError(
-        f"No private key available. Provide private_key parameter or set {ENV_PRIVATE_KEY} env var."
-    )
-
-
-def _create_neo3_account(private_key: str):
-    """Create a neo3 Account from a WIF or hex private key.
-
-    Returns:
-        neo3.wallet.account.Account instance.
-    """
-    from neo3.wallet.account import Account
-
-    # Try WIF first
-    try:
-        return Account.from_wif(private_key)
-    except Exception:
-        pass
-
-    # Try hex private key
-    key_hex = private_key
-    if key_hex.startswith("0x"):
-        key_hex = key_hex[2:]
-    key_bytes = bytes.fromhex(key_hex)
-    return Account.from_private_key(key_bytes)
+# Backwards-compatible aliases so existing imports still work:
+#   from .transfer_tools import _get_rpc_url, _resolve_private_key, _create_neo3_account
+_get_rpc_url = get_rpc_url
+_resolve_private_key = resolve_private_key
+_create_neo3_account = create_neo3_account
 
 
 class NeoTransferTool(BaseTool):
@@ -241,13 +188,13 @@ class NeoTransferTool(BaseTool):
 
             if wait_for_receipt:
                 receipt = await facade.invoke(transfer_call)
-                state_str = "HALT" if str(receipt.state) == "VMState.HALT" or "HALT" in str(receipt.state) else str(receipt.state)
-                success = "HALT" in state_str
+                success = is_halt(receipt)
+                s_label = state_label(receipt)
 
                 result = {
                     "tx_hash": str(receipt.tx_hash),
                     "success": success,
-                    "state": state_str,
+                    "state": s_label,
                     "gas_consumed": receipt.gas_consumed,
                     "included_in_block": receipt.included_in_block,
                     "confirmations": receipt.confirmations,
@@ -259,10 +206,10 @@ class NeoTransferTool(BaseTool):
                 }
 
                 if receipt.exception:
-                    result["exception"] = receipt.exception
+                    result["exception"] = sanitize_error(receipt.exception)
 
                 if not success:
-                    return ToolResult(error=f"Transaction failed: {receipt.exception or state_str}", output=result)
+                    return ToolResult(error=f"Transaction failed: {sanitize_error(receipt.exception) or s_label}", output=result)
 
                 return ToolResult(output=result)
             else:
@@ -397,13 +344,13 @@ class NeoNep11TransferTool(BaseTool):
 
             source_address = str(account.address)
             receipt = await facade.invoke(transfer_call)
-            state_str = "HALT" if "HALT" in str(receipt.state) else str(receipt.state)
-            success = "HALT" in state_str
+            success = is_halt(receipt)
+            s_label = state_label(receipt)
 
             result = {
                 "tx_hash": str(receipt.tx_hash),
                 "success": success,
-                "state": state_str,
+                "state": s_label,
                 "gas_consumed": receipt.gas_consumed,
                 "included_in_block": receipt.included_in_block,
                 "from": source_address,
@@ -414,10 +361,10 @@ class NeoNep11TransferTool(BaseTool):
             }
 
             if receipt.exception:
-                result["exception"] = receipt.exception
+                result["exception"] = sanitize_error(receipt.exception)
 
             if not success:
-                return ToolResult(error=f"NFT transfer failed: {receipt.exception or state_str}", output=result)
+                return ToolResult(error=f"NFT transfer failed: {sanitize_error(receipt.exception) or s_label}", output=result)
 
             return ToolResult(output=result)
 

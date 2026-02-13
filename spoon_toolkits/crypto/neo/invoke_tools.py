@@ -18,6 +18,7 @@ from .transfer_tools import (
     _resolve_private_key,
     _create_neo3_account,
 )
+from ._helpers import is_halt, state_label, sanitize_error
 
 logger = logging.getLogger(__name__)
 
@@ -217,8 +218,8 @@ class NeoInvokeContractTool(BaseTool):
 
             if wait_for_receipt:
                 receipt = await facade.invoke(call)
-                state_str = "HALT" if "HALT" in str(receipt.state) else str(receipt.state)
-                success = "HALT" in state_str
+                success = is_halt(receipt)
+                s_label = state_label(receipt)
 
                 # Format notifications
                 notifications = []
@@ -232,7 +233,7 @@ class NeoInvokeContractTool(BaseTool):
                 result = {
                     "tx_hash": str(receipt.tx_hash),
                     "success": success,
-                    "state": state_str,
+                    "state": s_label,
                     "gas_consumed": receipt.gas_consumed,
                     "included_in_block": receipt.included_in_block,
                     "confirmations": receipt.confirmations,
@@ -244,10 +245,10 @@ class NeoInvokeContractTool(BaseTool):
                 }
 
                 if receipt.exception:
-                    result["exception"] = receipt.exception
+                    result["exception"] = sanitize_error(receipt.exception)
 
                 if not success:
-                    return ToolResult(error=f"Contract invocation failed: {receipt.exception or state_str}", output=result)
+                    return ToolResult(error=f"Contract invocation failed: {sanitize_error(receipt.exception) or s_label}", output=result)
 
                 return ToolResult(output=result)
             else:
@@ -369,8 +370,8 @@ class NeoTestInvokeTool(BaseTool):
 
             # Test invoke
             receipt = await facade.test_invoke(call)
-            state_str = "HALT" if "HALT" in str(receipt.state) else str(receipt.state)
-            success = "HALT" in state_str
+            success = is_halt(receipt)
+            s_label = state_label(receipt)
 
             # Format stack output
             stack_output = []
@@ -394,7 +395,7 @@ class NeoTestInvokeTool(BaseTool):
 
             result = {
                 "success": success,
-                "state": state_str,
+                "state": s_label,
                 "gas_consumed": receipt.gas_consumed,
                 "stack": stack_output,
                 "notifications": notifications,
@@ -404,10 +405,10 @@ class NeoTestInvokeTool(BaseTool):
             }
 
             if receipt.exception:
-                result["exception"] = receipt.exception
+                result["exception"] = sanitize_error(receipt.exception)
 
             if not success:
-                return ToolResult(error=f"Test invocation faulted: {receipt.exception or state_str}", output=result)
+                return ToolResult(error=f"Test invocation faulted: {sanitize_error(receipt.exception) or s_label}", output=result)
 
             return ToolResult(output=result)
 
@@ -524,8 +525,8 @@ class NeoBatchInvokeTool(BaseTool):
 
             # Execute batch
             receipt = await facade.invoke_multi(contract_calls)
-            state_str = "HALT" if "HALT" in str(receipt.state) else str(receipt.state)
-            success = "HALT" in state_str
+            success = is_halt(receipt)
+            s_label = state_label(receipt)
 
             # Format per-call results
             call_results = []
@@ -547,7 +548,7 @@ class NeoBatchInvokeTool(BaseTool):
             result = {
                 "tx_hash": str(receipt.tx_hash),
                 "success": success,
-                "state": state_str,
+                "state": s_label,
                 "gas_consumed": receipt.gas_consumed,
                 "included_in_block": receipt.included_in_block,
                 "from": source_address,
@@ -558,10 +559,10 @@ class NeoBatchInvokeTool(BaseTool):
             }
 
             if receipt.exception:
-                result["exception"] = receipt.exception
+                result["exception"] = sanitize_error(receipt.exception)
 
             if not success:
-                return ToolResult(error=f"Batch invocation failed: {receipt.exception or state_str}", output=result)
+                return ToolResult(error=f"Batch invocation failed: {sanitize_error(receipt.exception) or s_label}", output=result)
 
             return ToolResult(output=result)
 

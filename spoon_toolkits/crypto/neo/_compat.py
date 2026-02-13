@@ -17,8 +17,9 @@ def apply():
     # -- Fix 1: raise default timeout from 3 s to 30 s --------------------
     _original_init = noderpc.RPCClient.__init__
 
-    def _init_with_longer_timeout(self, url: str, timeout: float = 30.0):
-        _original_init(self, url, timeout)
+    def _init_with_longer_timeout(self, *args, **kwargs):
+        kwargs.setdefault("timeout", 30.0)
+        _original_init(self, *args, **kwargs)
 
     noderpc.RPCClient.__init__ = _init_with_longer_timeout
 

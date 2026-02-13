@@ -16,6 +16,7 @@ from .transfer_tools import (
     _resolve_private_key,
     _create_neo3_account,
 )
+from ._helpers import is_halt, state_label, sanitize_error
 
 logger = logging.getLogger(__name__)
 
@@ -125,13 +126,13 @@ class NeoClaimGasTool(BaseTool):
             )
 
             receipt = await facade.invoke(transfer_call)
-            state_str = "HALT" if "HALT" in str(receipt.state) else str(receipt.state)
-            success = "HALT" in state_str
+            success = is_halt(receipt)
+            s_label = state_label(receipt)
 
             result = {
                 "tx_hash": str(receipt.tx_hash),
                 "success": success,
-                "state": state_str,
+                "state": s_label,
                 "address": source_address,
                 "unclaimed_gas": unclaimed_gas,
                 "neo_balance": neo_balance,
@@ -141,10 +142,10 @@ class NeoClaimGasTool(BaseTool):
             }
 
             if receipt.exception:
-                result["exception"] = receipt.exception
+                result["exception"] = sanitize_error(receipt.exception)
 
             if not success:
-                return ToolResult(error=f"GAS claim failed: {receipt.exception or state_str}", output=result)
+                return ToolResult(error=f"GAS claim failed: {sanitize_error(receipt.exception) or s_label}", output=result)
 
             return ToolResult(output=result)
 
@@ -247,13 +248,13 @@ class NeoVoteTool(BaseTool):
             )
 
             receipt = await facade.invoke(vote_call)
-            state_str = "HALT" if "HALT" in str(receipt.state) else str(receipt.state)
-            success = "HALT" in state_str
+            success = is_halt(receipt)
+            s_label = state_label(receipt)
 
             result = {
                 "tx_hash": str(receipt.tx_hash),
                 "success": success,
-                "state": state_str,
+                "state": s_label,
                 "voter": source_address,
                 "candidate": candidate_pubkey,
                 "gas_consumed": receipt.gas_consumed,
@@ -262,10 +263,10 @@ class NeoVoteTool(BaseTool):
             }
 
             if receipt.exception:
-                result["exception"] = receipt.exception
+                result["exception"] = sanitize_error(receipt.exception)
 
             if not success:
-                return ToolResult(error=f"Vote failed: {receipt.exception or state_str}", output=result)
+                return ToolResult(error=f"Vote failed: {sanitize_error(receipt.exception) or s_label}", output=result)
 
             return ToolResult(output=result)
 

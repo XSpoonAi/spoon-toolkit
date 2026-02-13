@@ -15,6 +15,7 @@ from .transfer_tools import (
     _resolve_private_key,
     _create_neo3_account,
 )
+from ._helpers import is_halt, state_label, sanitize_error
 
 logger = logging.getLogger(__name__)
 
@@ -135,13 +136,13 @@ class NeoDeployContractTool(BaseTool):
 
             # Execute deployment
             receipt = await facade.invoke(deploy_call)
-            state_str = "HALT" if "HALT" in str(receipt.state) else str(receipt.state)
-            success = "HALT" in state_str
+            success = is_halt(receipt)
+            s_label = state_label(receipt)
 
             result = {
                 "tx_hash": str(receipt.tx_hash),
                 "success": success,
-                "state": state_str,
+                "state": s_label,
                 "deployer": source_address,
                 "gas_consumed": receipt.gas_consumed,
                 "included_in_block": receipt.included_in_block,
@@ -153,10 +154,10 @@ class NeoDeployContractTool(BaseTool):
                 result["contract_hash"] = str(receipt.result)
 
             if receipt.exception:
-                result["exception"] = receipt.exception
+                result["exception"] = sanitize_error(receipt.exception)
 
             if not success:
-                return ToolResult(error=f"Deployment failed: {receipt.exception or state_str}", output=result)
+                return ToolResult(error=f"Deployment failed: {sanitize_error(receipt.exception) or s_label}", output=result)
 
             return ToolResult(output=result)
 
