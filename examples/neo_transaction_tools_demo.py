@@ -44,6 +44,14 @@ TEST_ADDRESS = "NUTtedVrz5RgKAdCvtKiq3sRkb9pizcewe"
 TEST_CONTRACT_NEO = "0xef4073a0f2b305a38ec4050e4d3d28bc40ea63f5"
 TEST_CONTRACT_GAS = "0xd2a4cff31913016155e38e474a2c06d08be276cf"
 
+# Optional: set these env vars to enable the corresponding demo
+# NEO_TEST_NFT_CONTRACT   - NEP-11 contract hash for NFT transfer demo
+# NEO_TEST_NFT_TOKEN_ID   - token ID you own on that contract
+# NEO_TEST_NFT_TO_ADDRESS - recipient address (defaults to TEST_ADDRESS)
+# NEO_TEST_CANDIDATE_PUBKEY - candidate public key for vote demo
+# NEO_TEST_NEF_PATH       - path to .nef file for deploy demo
+# NEO_TEST_MANIFEST_PATH  - path to .manifest.json for deploy demo
+
 
 # ===========================================================================
 # Helper
@@ -230,15 +238,33 @@ async def demo_nep11_transfer():
 
     tool = NeoNep11TransferTool()
 
-    print("\n--- NFT transfer requires a specific NFT contract and token_id ---")
-    print("    Skipping live execution (needs owned NFT).")
-    print("    Usage example:")
-    print('    await tool.execute(')
-    print('        contract_hash="0x<nep11_contract>",')
-    print('        to_address="NXV2zsh...",')
-    print('        token_id="<hex_or_utf8_token_id>",')
-    print(f'        network="{NETWORK}",')
-    print("    )")
+    nft_contract = os.getenv("NEO_TEST_NFT_CONTRACT")
+    nft_token_id = os.getenv("NEO_TEST_NFT_TOKEN_ID")
+    nft_to = os.getenv("NEO_TEST_NFT_TO_ADDRESS", TEST_ADDRESS)
+
+    if nft_contract and nft_token_id:
+        print(f"\n--- Transfer NFT {nft_token_id[:20]}... to {nft_to} ---")
+        res = await tool.execute(
+            contract_hash=nft_contract,
+            to_address=nft_to,
+            token_id=nft_token_id,
+            network=NETWORK,
+        )
+        print(result_json(res))
+    else:
+        missing = []
+        if not nft_contract:
+            missing.append("NEO_TEST_NFT_CONTRACT")
+        if not nft_token_id:
+            missing.append("NEO_TEST_NFT_TOKEN_ID")
+        print(f"\n--- Skipped: set {', '.join(missing)} env var(s) to enable ---")
+        print("    Usage example:")
+        print('    await tool.execute(')
+        print('        contract_hash="0x<nep11_contract>",')
+        print('        to_address="NXV2zsh...",')
+        print('        token_id="<hex_or_utf8_token_id>",')
+        print(f'        network="{NETWORK}",')
+        print("    )")
 
 
 # ===========================================================================
@@ -336,13 +362,22 @@ async def demo_vote():
 
     tool = NeoVoteTool()
 
-    print("\n--- Voting requires a valid candidate public key ---")
-    print("    Skipping live execution (needs known candidate pubkey on testnet).")
-    print("    Usage example:")
-    print('    await tool.execute(')
-    print('        candidate_pubkey="02208aea0068c429a03316e37be0e3e8e21e6cda...",')
-    print(f'        network="{NETWORK}",')
-    print("    )")
+    candidate_pubkey = os.getenv("NEO_TEST_CANDIDATE_PUBKEY")
+
+    if candidate_pubkey:
+        print(f"\n--- Vote for candidate {candidate_pubkey[:20]}... ---")
+        res = await tool.execute(
+            candidate_pubkey=candidate_pubkey,
+            network=NETWORK,
+        )
+        print(result_json(res))
+    else:
+        print("\n--- Skipped: set NEO_TEST_CANDIDATE_PUBKEY env var to enable ---")
+        print("    Usage example:")
+        print('    await tool.execute(')
+        print('        candidate_pubkey="02208aea0068c429a03316e37be0e3e8e21e6cda...",')
+        print(f'        network="{NETWORK}",')
+        print("    )")
 
 
 # ===========================================================================
@@ -355,14 +390,38 @@ async def demo_deploy_contract():
 
     tool = NeoDeployContractTool()
 
-    print("\n--- Contract deployment requires compiled .nef and .manifest.json files ---")
-    print("    Skipping live execution (needs contract artifacts).")
-    print("    Usage example:")
-    print('    await tool.execute(')
-    print('        nef_path="./my_contract.nef",')
-    print('        manifest_path="./my_contract.manifest.json",')
-    print(f'        network="{NETWORK}",')
-    print("    )")
+    nef_path = os.getenv("NEO_TEST_NEF_PATH")
+    manifest_path = os.getenv("NEO_TEST_MANIFEST_PATH")
+
+    if nef_path and manifest_path:
+        nef_exists = os.path.isfile(nef_path)
+        manifest_exists = os.path.isfile(manifest_path)
+        if nef_exists and manifest_exists:
+            print(f"\n--- Deploy contract: {os.path.basename(nef_path)} ---")
+            res = await tool.execute(
+                nef_path=nef_path,
+                manifest_path=manifest_path,
+                network=NETWORK,
+            )
+            print(result_json(res))
+        else:
+            if not nef_exists:
+                print(f"\n--- Skipped: NEF file not found: {nef_path} ---")
+            if not manifest_exists:
+                print(f"--- Skipped: Manifest file not found: {manifest_path} ---")
+    else:
+        missing = []
+        if not nef_path:
+            missing.append("NEO_TEST_NEF_PATH")
+        if not manifest_path:
+            missing.append("NEO_TEST_MANIFEST_PATH")
+        print(f"\n--- Skipped: set {', '.join(missing)} env var(s) to enable ---")
+        print("    Usage example:")
+        print('    await tool.execute(')
+        print('        nef_path="./my_contract.nef",')
+        print('        manifest_path="./my_contract.manifest.json",')
+        print(f'        network="{NETWORK}",')
+        print("    )")
 
 
 # ===========================================================================
